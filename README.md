@@ -39,19 +39,19 @@ The UI shows a live waveform, plays audio in the browser, and lets you download 
 
 ```bash
 # Default: 10s, high quality → blipblop.wav
-python blipblop.py
+python main.py
 
 # Set duration
-python blipblop.py -d 30
+python main.py -d 30
 
 # Custom output file
-python blipblop.py -d 60 -o my_glorb.wav
+python main.py -d 60 -o my_glorb.wav
 
 # Set quality
-python blipblop.py -q studio
+python main.py -q studio
 
 # Render and play immediately
-python blipblop.py -d 10 --play
+python main.py -d 10 --play
 ```
 
 ### Quality presets
@@ -88,7 +88,7 @@ pip install numpy sounddevice soundfile scipy flask
 
 ```
 glorb/
-├── blipblop.py          # Synthesis engine + CLI
+├── main.py              # Synthesis engine + CLI
 ├── server.py            # Flask web server
 └── templates/
     └── index.html       # Minimal dark web UI

@@ -12,7 +12,7 @@ from flask import Flask, render_template, request, send_file, jsonify
 
 # Import synthesis from blipblop.py in the same directory
 sys.path.insert(0, os.path.dirname(__file__))
-import blipblop as bb
+import main as bb
 
 app = Flask(__name__)
 
