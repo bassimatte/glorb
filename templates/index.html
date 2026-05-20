@@ -199,7 +199,7 @@
     #btn-generate:active:not(:disabled) { transform: translateY(0); }
     #btn-generate:disabled { opacity: .35; cursor: not-allowed; }
 
-    #btn-play, #btn-download {
+    #btn-play, #btn-download, #btn-viz {
       padding: 16px 20px;
       background: transparent;
       border: 1px solid var(--border);
@@ -214,7 +214,7 @@
       transition: all .15s;
       display: none;
     }
-    #btn-play:hover, #btn-download:hover {
+    #btn-play:hover, #btn-download:hover, #btn-viz:hover {
       border-color: var(--accent);
       color: var(--accent);
     }
@@ -222,6 +222,35 @@
       border-color: var(--danger);
       color: var(--danger);
     }
+
+    /* ── Visualizer overlay ──────────────────────────────────────────*/
+    #viz-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 50;
+      cursor: none;
+    }
+    #viz-overlay.active { display: block; }
+    #viz-canvas { display: block; width: 100%; height: 100%; }
+    #viz-close {
+      position: absolute;
+      top: 24px; right: 28px;
+      background: transparent;
+      border: 1px solid #222;
+      border-radius: var(--radius);
+      color: #333;
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      padding: 7px 14px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all .2s;
+      z-index: 51;
+    }
+    #viz-close:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── Status bar ──────────────────────────────────────────────── */
     #status {
@@ -272,6 +301,7 @@
     <div class="row actions">
       <button id="btn-generate">Generate</button>
       <button id="btn-play">▶ Play</button>
+      <button id="btn-viz">⬡ Visualize</button>
       <button id="btn-download">↓ Save</button>
     </div>
 
@@ -281,25 +311,39 @@
 
 </div>
 
+<!-- ── Visualizer overlay ─────────────────────────────────────────── -->
+<div id="viz-overlay">
+  <canvas id="viz-canvas"></canvas>
+  <button id="viz-close">✕ close</button>
+</div>
+
 <script>
   /* ── State ──────────────────────────────────────────────────────── */
   let audioCtx    = null;
   let audioBuffer = null;
   let sourceNode  = null;
+  let analyser    = null;
   let isPlaying   = false;
   let selectedQ   = 'high';
   let animId      = null;
+  let vizAnimId   = null;
+  let vizActive   = false;
 
   /* ── Elements ───────────────────────────────────────────────────── */
-  const canvas    = document.getElementById('waveform');
-  const ctx2d     = canvas.getContext('2d');
-  const btnGen    = document.getElementById('btn-generate');
-  const btnPlay   = document.getElementById('btn-play');
-  const btnDl     = document.getElementById('btn-download');
-  const sliderDur = document.getElementById('slider-dur');
-  const durVal    = document.getElementById('dur-val');
-  const statusEl  = document.getElementById('status');
-  const pills     = document.querySelectorAll('.pill');
+  const canvas      = document.getElementById('waveform');
+  const ctx2d       = canvas.getContext('2d');
+  const btnGen      = document.getElementById('btn-generate');
+  const btnPlay     = document.getElementById('btn-play');
+  const btnViz      = document.getElementById('btn-viz');
+  const btnDl       = document.getElementById('btn-download');
+  const sliderDur   = document.getElementById('slider-dur');
+  const durVal      = document.getElementById('dur-val');
+  const statusEl    = document.getElementById('status');
+  const pills       = document.querySelectorAll('.pill');
+  const vizOverlay  = document.getElementById('viz-overlay');
+  const vizCanvas   = document.getElementById('viz-canvas');
+  const vizCtx      = vizCanvas.getContext('2d');
+  const btnVizClose = document.getElementById('viz-close');
 
   /* ── Duration slider ────────────────────────────────────────────── */
   sliderDur.addEventListener('input', () => {
@@ -321,34 +365,25 @@
     statusEl.className = cls;
   }
 
-  /* ── Waveform drawing ───────────────────────────────────────────── */
+  /* ── Waveform drawing (main UI) ─────────────────────────────────── */
   function drawWaveform(buffer, progress = 1) {
     const W = canvas.width, H = canvas.height;
     ctx2d.clearRect(0, 0, W, H);
+    const data  = buffer.getChannelData(0);
+    const step  = Math.ceil(data.length / W);
+    const drawn = Math.floor(W * progress);
 
-    const data   = buffer.getChannelData(0);
-    const step   = Math.ceil(data.length / W);
-    const drawn  = Math.floor(W * progress);
-
-    // Dim / unplayed portion
     ctx2d.strokeStyle = '#1e3a2a';
     ctx2d.lineWidth   = 1.5;
     ctx2d.beginPath();
     for (let x = 0; x < W; x++) {
       let max = 0;
-      for (let i = 0; i < step; i++) {
-        const v = Math.abs(data[x * step + i] || 0);
-        if (v > max) max = v;
-      }
-      const y = (1 - max) * H / 2;
-      const y2 = (1 + max) * H / 2;
-      if (x === 0) ctx2d.moveTo(x, y);
-      ctx2d.lineTo(x, y);
-      ctx2d.lineTo(x, y2);
+      for (let i = 0; i < step; i++) { const v = Math.abs(data[x*step+i]||0); if(v>max) max=v; }
+      const y = (1-max)*H/2, y2 = (1+max)*H/2;
+      if (x===0) ctx2d.moveTo(x,y); ctx2d.lineTo(x,y); ctx2d.lineTo(x,y2);
     }
     ctx2d.stroke();
 
-    // Played / bright portion
     if (drawn > 0) {
       ctx2d.strokeStyle = '#00ff88';
       ctx2d.shadowColor = '#00ff88';
@@ -357,15 +392,9 @@
       ctx2d.beginPath();
       for (let x = 0; x < drawn; x++) {
         let max = 0;
-        for (let i = 0; i < step; i++) {
-          const v = Math.abs(data[x * step + i] || 0);
-          if (v > max) max = v;
-        }
-        const y  = (1 - max) * H / 2;
-        const y2 = (1 + max) * H / 2;
-        if (x === 0) ctx2d.moveTo(x, y);
-        ctx2d.lineTo(x, y);
-        ctx2d.lineTo(x, y2);
+        for (let i = 0; i < step; i++) { const v = Math.abs(data[x*step+i]||0); if(v>max) max=v; }
+        const y = (1-max)*H/2, y2 = (1+max)*H/2;
+        if (x===0) ctx2d.moveTo(x,y); ctx2d.lineTo(x,y); ctx2d.lineTo(x,y2);
       }
       ctx2d.stroke();
       ctx2d.shadowBlur = 0;
@@ -378,20 +407,18 @@
     ctx2d.strokeStyle = '#1e1e1e';
     ctx2d.lineWidth = 1;
     ctx2d.beginPath();
-    ctx2d.moveTo(0, H / 2);
-    ctx2d.lineTo(W, H / 2);
+    ctx2d.moveTo(0, H/2); ctx2d.lineTo(W, H/2);
     ctx2d.stroke();
   }
-
   drawIdle();
 
-  /* ── Playback progress loop ─────────────────────────────────────── */
+  /* ── Playback progress loop (main UI) ──────────────────────────── */
   function startProgressLoop(startedAt) {
     function tick() {
       if (!isPlaying || !audioBuffer) return;
       const elapsed  = audioCtx.currentTime - startedAt;
       const progress = Math.min(elapsed / audioBuffer.duration, 1);
-      drawWaveform(audioBuffer, progress);
+      if (!vizActive) drawWaveform(audioBuffer, progress);
       if (progress < 1) animId = requestAnimationFrame(tick);
       else stopPlayback();
     }
@@ -400,41 +427,56 @@
 
   /* ── Stop playback ──────────────────────────────────────────────── */
   function stopPlayback() {
-    if (sourceNode) { try { sourceNode.stop(); } catch(_) {} sourceNode = null; }
-    if (animId)     { cancelAnimationFrame(animId); animId = null; }
+    if (sourceNode)  { try { sourceNode.stop(); } catch(_){} sourceNode = null; }
+    if (animId)      { cancelAnimationFrame(animId);    animId    = null; }
+    if (vizAnimId)   { cancelAnimationFrame(vizAnimId); vizAnimId = null; }
     isPlaying = false;
     btnPlay.textContent = '▶ Play';
     btnPlay.classList.remove('playing');
     if (audioBuffer) drawWaveform(audioBuffer, 1);
   }
 
-  /* ── Play button ────────────────────────────────────────────────── */
-  btnPlay.addEventListener('click', () => {
-    if (!audioBuffer) return;
-    if (isPlaying) { stopPlayback(); return; }
-
+  /* ── Start audio (shared by Play and Visualize) ─────────────────── */
+  function startAudio() {
+    if (!audioBuffer) return null;
     if (!audioCtx) audioCtx = new AudioContext();
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
+    // Create analyser and wire it
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.8;
+
     sourceNode = audioCtx.createBufferSource();
     sourceNode.buffer = audioBuffer;
-    sourceNode.connect(audioCtx.destination);
-    sourceNode.onended = stopPlayback;
+    sourceNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    sourceNode.onended = () => {
+      stopPlayback();
+      if (vizActive) closeViz();
+    };
 
     const startedAt = audioCtx.currentTime;
     sourceNode.start();
     isPlaying = true;
+    return startedAt;
+  }
+
+  /* ── Play button ────────────────────────────────────────────────── */
+  btnPlay.addEventListener('click', () => {
+    if (!audioBuffer) return;
+    if (isPlaying) { stopPlayback(); return; }
+    const startedAt = startAudio();
     btnPlay.textContent = '■ Stop';
     btnPlay.classList.add('playing');
     startProgressLoop(startedAt);
   });
 
   /* ── Download button ────────────────────────────────────────────── */
-  btnPlay._wavBlob = null;
   btnDl.addEventListener('click', () => {
     if (!btnDl._wavBlob) return;
-    const a   = document.createElement('a');
-    a.href    = URL.createObjectURL(btnDl._wavBlob);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(btnDl._wavBlob);
     a.download = `glorb_${Date.now()}.wav`;
     a.click();
   });
@@ -443,18 +485,16 @@
   btnGen.addEventListener('click', async () => {
     stopPlayback();
     btnGen.disabled = true;
-    btnPlay.style.display  = 'none';
-    btnDl.style.display    = 'none';
+    btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'none';
     setStatus('generating…', 'active');
     drawIdle();
 
     try {
       const res = await fetch('/generate', {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ duration: +sliderDur.value, quality: selectedQ }),
+        body: JSON.stringify({ duration: +sliderDur.value, quality: selectedQ }),
       });
-
       if (!res.ok) throw new Error(`Server error ${res.status}`);
 
       const arrayBuf = await res.arrayBuffer();
@@ -466,15 +506,145 @@
       drawWaveform(audioBuffer, 1);
       btnDl._wavBlob = wavBlob;
 
-      btnPlay.style.display = 'inline-block';
-      btnDl.style.display   = 'inline-block';
-      setStatus(`ready — ${audioBuffer.duration.toFixed(1)}s · ${audioBuffer.sampleRate / 1000}kHz · ${audioBuffer.numberOfChannels === 2 ? 'stereo' : 'mono'}`);
+      btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'inline-block';
+      setStatus(`ready — ${audioBuffer.duration.toFixed(1)}s · ${audioBuffer.sampleRate/1000}kHz · stereo`);
     } catch (err) {
       setStatus(err.message, 'error');
     } finally {
       btnGen.disabled = false;
     }
   });
+
+  /* ══════════════════════════════════════════════════════════════════
+     VISUALIZER
+  ══════════════════════════════════════════════════════════════════ */
+
+  function resizeVizCanvas() {
+    vizCanvas.width  = vizCanvas.offsetWidth  * window.devicePixelRatio;
+    vizCanvas.height = vizCanvas.offsetHeight * window.devicePixelRatio;
+    vizCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  }
+  window.addEventListener('resize', () => { if (vizActive) resizeVizCanvas(); });
+
+  function openViz() {
+    if (!audioBuffer) return;
+    stopPlayback();
+    vizActive = true;
+    vizOverlay.classList.add('active');
+    resizeVizCanvas();
+
+    const startedAt = startAudio();
+    btnPlay.textContent = '▶ Play';
+    startProgressLoop(startedAt);
+    drawViz();
+  }
+
+  function closeViz() {
+    vizActive = false;
+    vizOverlay.classList.remove('active');
+    if (vizAnimId) { cancelAnimationFrame(vizAnimId); vizAnimId = null; }
+    stopPlayback();
+  }
+
+  btnViz.addEventListener('click', openViz);
+  btnVizClose.addEventListener('click', closeViz);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && vizActive) closeViz(); });
+
+  /* ── Visualizer draw loop ───────────────────────────────────────── */
+  function drawViz() {
+    const W = vizCanvas.offsetWidth;
+    const H = vizCanvas.offsetHeight;
+    const cx = W / 2, cy = H / 2;
+
+    const freqData  = new Uint8Array(analyser.frequencyBinCount);
+    const timeData  = new Uint8Array(analyser.fftSize);
+    const N_BARS    = 180;   // radial frequency bars
+    const INNER_R   = Math.min(W, H) * 0.18;
+    const MAX_BAR_H = Math.min(W, H) * 0.28;
+    const RING_R    = Math.min(W, H) * 0.48;
+
+    function frame() {
+      if (!vizActive) return;
+      vizAnimId = requestAnimationFrame(frame);
+
+      analyser.getByteFrequencyData(freqData);
+      analyser.getByteTimeDomainData(timeData);
+
+      // Fade trail (dark translucent fill instead of clear)
+      vizCtx.fillStyle = 'rgba(0,0,0,0.18)';
+      vizCtx.fillRect(0, 0, W, H);
+
+      // ── Radial frequency bars ──────────────────────────────────── //
+      for (let i = 0; i < N_BARS; i++) {
+        const angle   = (i / N_BARS) * Math.PI * 2 - Math.PI / 2;
+        const binIdx  = Math.floor((i / N_BARS) * (freqData.length * 0.75));
+        const amp     = freqData[binIdx] / 255;
+        const barH    = amp * MAX_BAR_H;
+        const alpha   = 0.5 + amp * 0.5;
+        const bright  = Math.floor(amp * 255);
+
+        // Color: deep green → bright cyan-white with amplitude
+        const r = Math.floor(amp * 80);
+        const g = Math.floor(180 + amp * 75);
+        const b = Math.floor(amp * 160);
+
+        const x1 = cx + Math.cos(angle) * INNER_R;
+        const y1 = cy + Math.sin(angle) * INNER_R;
+        const x2 = cx + Math.cos(angle) * (INNER_R + barH);
+        const y2 = cy + Math.sin(angle) * (INNER_R + barH);
+
+        vizCtx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+        vizCtx.lineWidth   = (W / N_BARS) * 0.7;
+        vizCtx.shadowColor = `rgba(0,255,136,${amp * 0.6})`;
+        vizCtx.shadowBlur  = amp * 18;
+        vizCtx.beginPath();
+        vizCtx.moveTo(x1, y1);
+        vizCtx.lineTo(x2, y2);
+        vizCtx.stroke();
+      }
+      vizCtx.shadowBlur = 0;
+
+      // ── Oscilloscope ring ──────────────────────────────────────── //
+      const sliceAngle = (Math.PI * 2) / timeData.length;
+      vizCtx.strokeStyle = 'rgba(0,255,136,0.55)';
+      vizCtx.lineWidth   = 1.5;
+      vizCtx.shadowColor = '#00ff88';
+      vizCtx.shadowBlur  = 8;
+      vizCtx.beginPath();
+      for (let i = 0; i < timeData.length; i++) {
+        const v     = timeData[i] / 128.0 - 1.0;
+        const r     = RING_R + v * (Math.min(W,H) * 0.05);
+        const angle = i * sliceAngle - Math.PI / 2;
+        const x     = cx + r * Math.cos(angle);
+        const y     = cy + r * Math.sin(angle);
+        if (i === 0) vizCtx.moveTo(x, y); else vizCtx.lineTo(x, y);
+      }
+      vizCtx.closePath();
+      vizCtx.stroke();
+      vizCtx.shadowBlur = 0;
+
+      // ── Centre pulse circle ────────────────────────────────────── //
+      const avgFreq = freqData.slice(0, 8).reduce((a,b) => a+b, 0) / 8 / 255;
+      const pulseR  = INNER_R * (0.7 + avgFreq * 0.6);
+      const grad    = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, pulseR);
+      grad.addColorStop(0,   `rgba(0,255,136,${0.15 + avgFreq * 0.3})`);
+      grad.addColorStop(1,   'rgba(0,0,0,0)');
+      vizCtx.fillStyle = grad;
+      vizCtx.beginPath();
+      vizCtx.arc(cx, cy, pulseR, 0, Math.PI * 2);
+      vizCtx.fill();
+
+      // ── GLORB wordmark ─────────────────────────────────────────── //
+      vizCtx.fillStyle = `rgba(0,255,136,${0.08 + avgFreq * 0.12})`;
+      vizCtx.font      = `900 ${Math.floor(Math.min(W,H) * 0.055)}px 'SF Mono','Fira Code',monospace`;
+      vizCtx.textAlign = 'center';
+      vizCtx.textBaseline = 'middle';
+      vizCtx.letterSpacing = '-0.04em';
+      vizCtx.fillText('GLORB', cx, cy);
+    }
+
+    frame();
+  }
 </script>
 </body>
 </html>
