@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GLORB</title>
+  <style>
+    /* ── Reset & base ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #090909;
+      --surface: #111111;
+      --border:  #1e1e1e;
+      --text:    #e8e8e8;
+      --muted:   #444;
+      --accent:  #00ff88;
+      --danger:  #ff3b5c;
+      --radius:  6px;
+      --font:    'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      padding: 48px 24px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      user-select: none;
+    }
+
+    .logo {
+      font-size: clamp(2.4rem, 8vw, 5rem);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      color: var(--accent);
+      line-height: 1;
+      text-shadow: 0 0 40px rgba(0,255,136,.25);
+    }
+
+    .tagline {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    /* ── Waveform canvas ─────────────────────────────────────────── */
+    .waveform-wrap {
+      width: 100%;
+      max-width: 680px;
+      position: relative;
+    }
+
+    canvas#waveform {
+      width: 100%;
+      height: 100px;
+      display: block;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Controls ────────────────────────────────────────────────── */
+    .controls {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      min-width: 68px;
+    }
+
+    /* Duration slider */
+    .slider-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(0,255,136,.5);
+      cursor: pointer;
+      transition: transform .15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    .duration-val {
+      min-width: 52px;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    /* Quality pills */
+    .pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      padding: 5px 14px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all .15s;
+      text-transform: uppercase;
+    }
+    .pill:hover  { border-color: var(--accent); color: var(--accent); }
+    .pill.active {
+      border-color: var(--accent);
+      color: var(--bg);
+      background: var(--accent);
+    }
+
+    /* ── Generate button ─────────────────────────────────────────── */
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    #btn-generate {
+      flex: 1;
+      min-width: 180px;
+      padding: 16px 28px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s, box-shadow .15s;
+      box-shadow: 0 0 24px rgba(0,255,136,.2);
+    }
+    #btn-generate:hover:not(:disabled) {
+      opacity: .88;
+      transform: translateY(-1px);
+      box-shadow: 0 0 36px rgba(0,255,136,.35);
+    }
+    #btn-generate:active:not(:disabled) { transform: translateY(0); }
+    #btn-generate:disabled { opacity: .35; cursor: not-allowed; }
+
+    #btn-play, #btn-download {
+      padding: 16px 20px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all .15s;
+      display: none;
+    }
+    #btn-play:hover, #btn-download:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    #btn-play.playing {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    /* ── Status bar ──────────────────────────────────────────────── */
+    #status {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      height: 16px;
+      text-align: center;
+    }
+    #status.active { color: var(--accent); }
+    #status.error  { color: var(--danger); }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="logo">GLORB</div>
+    <div class="tagline">organic sound generator</div>
+  </header>
+
+  <!-- Waveform -->
+  <div class="waveform-wrap">
+    <canvas id="waveform" width="1360" height="200"></canvas>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+
+    <div class="row">
+      <span class="label">Duration</span>
+      <div class="slider-wrap">
+        <input type="range" id="slider-dur" min="1" max="120" step="1" value="10" />
+        <span class="duration-val" id="dur-val">10s</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="label">Quality</span>
+      <div class="pills" id="quality-pills">
+        <button class="pill" data-q="standard">Standard</button>
+        <button class="pill active" data-q="high">High</button>
+        <button class="pill" data-q="studio">Studio</button>
+        <button class="pill" data-q="float">Float</button>
+      </div>
+    </div>
+
+    <div class="row actions">
+      <button id="btn-generate">Generate</button>
+      <button id="btn-play">▶ Play</button>
+      <button id="btn-download">↓ Save</button>
+    </div>
+
+  </div>
+
+  <div id="status">—</div>
+
+</div>
+
+<script>
+  /* ── State ──────────────────────────────────────────────────────── */
+  let audioCtx    = null;
+  let audioBuffer = null;
+  let sourceNode  = null;
+  let isPlaying   = false;
+  let selectedQ   = 'high';
+  let animId      = null;
+
+  /* ── Elements ───────────────────────────────────────────────────── */
+  const canvas    = document.getElementById('waveform');
+  const ctx2d     = canvas.getContext('2d');
+  const btnGen    = document.getElementById('btn-generate');
+  const btnPlay   = document.getElementById('btn-play');
+  const btnDl     = document.getElementById('btn-download');
+  const sliderDur = document.getElementById('slider-dur');
+  const durVal    = document.getElementById('dur-val');
+  const statusEl  = document.getElementById('status');
+  const pills     = document.querySelectorAll('.pill');
+
+  /* ── Duration slider ────────────────────────────────────────────── */
+  sliderDur.addEventListener('input', () => {
+    durVal.textContent = sliderDur.value + 's';
+  });
+
+  /* ── Quality pills ──────────────────────────────────────────────── */
+  pills.forEach(p => {
+    p.addEventListener('click', () => {
+      pills.forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      selectedQ = p.dataset.q;
+    });
+  });
+
+  /* ── Status helpers ─────────────────────────────────────────────── */
+  function setStatus(msg, cls = '') {
+    statusEl.textContent = msg;
+    statusEl.className = cls;
+  }
+
+  /* ── Waveform drawing ───────────────────────────────────────────── */
+  function drawWaveform(buffer, progress = 1) {
+    const W = canvas.width, H = canvas.height;
+    ctx2d.clearRect(0, 0, W, H);
+
+    const data   = buffer.getChannelData(0);
+    const step   = Math.ceil(data.length / W);
+    const drawn  = Math.floor(W * progress);
+
+    // Dim / unplayed portion
+    ctx2d.strokeStyle = '#1e3a2a';
+    ctx2d.lineWidth   = 1.5;
+    ctx2d.beginPath();
+    for (let x = 0; x < W; x++) {
+      let max = 0;
+      for (let i = 0; i < step; i++) {
+        const v = Math.abs(data[x * step + i] || 0);
+        if (v > max) max = v;
+      }
+      const y = (1 - max) * H / 2;
+      const y2 = (1 + max) * H / 2;
+      if (x === 0) ctx2d.moveTo(x, y);
+      ctx2d.lineTo(x, y);
+      ctx2d.lineTo(x, y2);
+    }
+    ctx2d.stroke();
+
+    // Played / bright portion
+    if (drawn > 0) {
+      ctx2d.strokeStyle = '#00ff88';
+      ctx2d.shadowColor = '#00ff88';
+      ctx2d.shadowBlur  = 6;
+      ctx2d.lineWidth   = 1.5;
+      ctx2d.beginPath();
+      for (let x = 0; x < drawn; x++) {
+        let max = 0;
+        for (let i = 0; i < step; i++) {
+          const v = Math.abs(data[x * step + i] || 0);
+          if (v > max) max = v;
+        }
+        const y  = (1 - max) * H / 2;
+        const y2 = (1 + max) * H / 2;
+        if (x === 0) ctx2d.moveTo(x, y);
+        ctx2d.lineTo(x, y);
+        ctx2d.lineTo(x, y2);
+      }
+      ctx2d.stroke();
+      ctx2d.shadowBlur = 0;
+    }
+  }
+
+  function drawIdle() {
+    const W = canvas.width, H = canvas.height;
+    ctx2d.clearRect(0, 0, W, H);
+    ctx2d.strokeStyle = '#1e1e1e';
+    ctx2d.lineWidth = 1;
+    ctx2d.beginPath();
+    ctx2d.moveTo(0, H / 2);
+    ctx2d.lineTo(W, H / 2);
+    ctx2d.stroke();
+  }
+
+  drawIdle();
+
+  /* ── Playback progress loop ─────────────────────────────────────── */
+  function startProgressLoop(startedAt) {
+    function tick() {
+      if (!isPlaying || !audioBuffer) return;
+      const elapsed  = audioCtx.currentTime - startedAt;
+      const progress = Math.min(elapsed / audioBuffer.duration, 1);
+      drawWaveform(audioBuffer, progress);
+      if (progress < 1) animId = requestAnimationFrame(tick);
+      else stopPlayback();
+    }
+    animId = requestAnimationFrame(tick);
+  }
+
+  /* ── Stop playback ──────────────────────────────────────────────── */
+  function stopPlayback() {
+    if (sourceNode) { try { sourceNode.stop(); } catch(_) {} sourceNode = null; }
+    if (animId)     { cancelAnimationFrame(animId); animId = null; }
+    isPlaying = false;
+    btnPlay.textContent = '▶ Play';
+    btnPlay.classList.remove('playing');
+    if (audioBuffer) drawWaveform(audioBuffer, 1);
+  }
+
+  /* ── Play button ────────────────────────────────────────────────── */
+  btnPlay.addEventListener('click', () => {
+    if (!audioBuffer) return;
+    if (isPlaying) { stopPlayback(); return; }
+
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    sourceNode = audioCtx.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.connect(audioCtx.destination);
+    sourceNode.onended = stopPlayback;
+
+    const startedAt = audioCtx.currentTime;
+    sourceNode.start();
+    isPlaying = true;
+    btnPlay.textContent = '■ Stop';
+    btnPlay.classList.add('playing');
+    startProgressLoop(startedAt);
+  });
+
+  /* ── Download button ────────────────────────────────────────────── */
+  btnPlay._wavBlob = null;
+  btnDl.addEventListener('click', () => {
+    if (!btnDl._wavBlob) return;
+    const a   = document.createElement('a');
+    a.href    = URL.createObjectURL(btnDl._wavBlob);
+    a.download = `glorb_${Date.now()}.wav`;
+    a.click();
+  });
+
+  /* ── Generate ───────────────────────────────────────────────────── */
+  btnGen.addEventListener('click', async () => {
+    stopPlayback();
+    btnGen.disabled = true;
+    btnPlay.style.display  = 'none';
+    btnDl.style.display    = 'none';
+    setStatus('generating…', 'active');
+    drawIdle();
+
+    try {
+      const res = await fetch('/generate', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ duration: +sliderDur.value, quality: selectedQ }),
+      });
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+      const arrayBuf = await res.arrayBuffer();
+      const wavBlob  = new Blob([arrayBuf], { type: 'audio/wav' });
+
+      if (!audioCtx) audioCtx = new AudioContext();
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuf.slice());
+
+      drawWaveform(audioBuffer, 1);
+      btnDl._wavBlob = wavBlob;
+
+      btnPlay.style.display = 'inline-block';
+      btnDl.style.display   = 'inline-block';
+      setStatus(`ready — ${audioBuffer.duration.toFixed(1)}s · ${audioBuffer.sampleRate / 1000}kHz · ${audioBuffer.numberOfChannels === 2 ? 'stereo' : 'mono'}`);
+    } catch (err) {
+      setStatus(err.message, 'error');
+    } finally {
+      btnGen.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
