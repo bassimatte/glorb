@@ -1977,3 +1977,366 @@ def make_lofi_sequence(target_duration=10.0):
         total += len(sig) / SAMPLE_RATE + gap
     return _finalise(np.concatenate(parts), target_duration)
 
+
+# =============================================================================
+# MODEM MODE  dial-up handshake & data tones
+# =============================================================================
+
+def _modem_fsk(freq_lo, freq_hi, duration, baud_rate=300):
+    """FSK: alternate randomly between two frequencies at baud_rate."""
+    bit_dur = 1.0 / baud_rate
+    n_bits = max(1, int(duration / bit_dur))
+    parts = []
+    for _ in range(n_bits):
+        f = random.choice([freq_lo, freq_hi])
+        t = _t(bit_dur)
+        parts.append(np.sin(2 * np.pi * f * t))
+    s = np.concatenate(parts)
+    fade = int(0.01 * SAMPLE_RATE)
+    if len(s) > 2 * fade:
+        s[:fade] *= np.linspace(0, 1, fade)
+        s[-fade:] *= np.linspace(1, 0, fade)
+    return s
+
+
+def _modem_answer_tone():
+    """2100 Hz answer tone with periodic 180° phase reversals."""
+    dur = random.uniform(0.3, 0.8)
+    t = _t(dur)
+    s = np.sin(2 * np.pi * 2100 * t)
+    period = int(0.45 * SAMPLE_RATE)
+    for i in range(0, len(s), period * 2):
+        s[i:min(i + period, len(s))] *= -1
+    fade = int(0.015 * SAMPLE_RATE)
+    s[:fade] *= np.linspace(0, 1, fade)
+    s[-fade:] *= np.linspace(1, 0, fade)
+    return to_stereo(s * 0.7)
+
+
+def _modem_handshake():
+    """V.21/V.22 negotiation: two FSK bursts at different frequencies."""
+    s1 = _modem_fsk(1080, 1750, random.uniform(0.08, 0.22), baud_rate=300)
+    gap = np.zeros(int(random.uniform(0.02, 0.07) * SAMPLE_RATE))
+    s2 = _modem_fsk(2025, 2225, random.uniform(0.1, 0.28), baud_rate=1200)
+    s = np.concatenate([s1, gap, s2])
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
+
+
+def _modem_dtmf():
+    """DTMF dial tone: sum of row + column frequencies."""
+    rows = [697, 770, 852, 941]
+    cols = [1209, 1336, 1477]
+    f1, f2 = random.choice(rows), random.choice(cols)
+    dur = random.uniform(0.05, 0.16)
+    t = _t(dur)
+    s = np.sin(2 * np.pi * f1 * t) + np.sin(2 * np.pi * f2 * t)
+    fade = int(0.008 * SAMPLE_RATE)
+    if len(s) > 2 * fade:
+        s[:fade] *= np.linspace(0, 1, fade)
+        s[-fade:] *= np.linspace(1, 0, fade)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.6)
+
+
+def _modem_screech():
+    """Initial connect screech: beating high carriers with FM sweep."""
+    dur = random.uniform(0.2, 0.55)
+    t = _t(dur)
+    f1 = random.uniform(2000, 3200)
+    f2 = f1 + random.uniform(200, 700)
+    sweep = np.cumsum(np.sin(2 * np.pi * random.uniform(300, 900) * t)
+                      * random.uniform(50, 180) / SAMPLE_RATE)
+    s = (np.sin(2 * np.pi * f1 * t) + 0.8 * np.sin(2 * np.pi * f2 * t)) \
+        * np.sin(2 * np.pi * 1200 * t + 2 * np.pi * sweep)
+    s = _bandpass(s, 600, 4000)
+    fade = int(0.02 * SAMPLE_RATE)
+    s[:fade] *= np.linspace(0, 1, fade)
+    s[-fade:] *= np.linspace(1, 0, fade)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
+
+
+_MODEM_SOUNDS = [
+    ("answer",    _modem_answer_tone, 2),
+    ("handshake", _modem_handshake,   4),
+    ("dtmf",      _modem_dtmf,        4),
+    ("screech",   _modem_screech,     2),
+]
+
+
+def make_modem_sequence(target_duration=10.0):
+    names, fns, weights = zip(*_MODEM_SOUNDS)
+    parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
+    while total < target_duration:
+        idx = random.choices(range(len(names)), weights=weights)[0]
+        sig = fns[idx]()
+        gap = random.uniform(0.03 * gap_scale, 0.22 * gap_scale)
+        parts.append(sig)
+        parts.append(silence(gap))
+        total += len(sig) / SAMPLE_RATE + gap
+    return _finalise(np.concatenate(parts), target_duration)
+
+
+# =============================================================================
+# INSECTS MODE  crickets, cicadas, grasshoppers
+# =============================================================================
+
+def _insect_cricket():
+    """Cricket chirp: 3–5 short pulses at 3.8–5.2 kHz."""
+    base = random.uniform(3800, 5200)
+    n_pulses = random.randint(2, 5)
+    parts = []
+    for _ in range(n_pulses):
+        dur = random.uniform(0.007, 0.022)
+        t = _t(dur)
+        s = (np.sin(2 * np.pi * base * t)
+             + 0.4 * np.sin(2 * np.pi * base * 2 * t)
+             + 0.15 * np.sin(2 * np.pi * base * 3 * t))
+        env = np.sin(np.pi * np.linspace(0, 1, len(t))) ** 0.5
+        parts.append(s * env)
+        parts.append(np.zeros(int(random.uniform(0.003, 0.012) * SAMPLE_RATE)))
+    s = np.concatenate(parts)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
+
+
+def _insect_cicada():
+    """Cicada buzz: AM-modulated band noise, rapid wing-beat amplitude."""
+    dur = random.uniform(0.15, 0.55)
+    n = int(dur * SAMPLE_RATE)
+    t = np.arange(n) / SAMPLE_RATE
+    fc = random.uniform(3000, 7000)
+    wing = random.uniform(100, 220)
+    am = 0.5 + 0.5 * np.abs(np.sin(np.pi * wing * t))
+    noise = _bandpass(np.random.randn(n), fc * 0.85, min(fc * 1.15, SAMPLE_RATE * 0.45))
+    env = np.exp(-np.linspace(0, random.uniform(1.5, 5), n))
+    env[:max(1, int(0.03 * n))] = np.linspace(0, 1, max(1, int(0.03 * n)))
+    s = noise * am * env
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
+
+
+def _insect_grasshopper():
+    """Grasshopper rasp: irregular high-frequency scratch bursts."""
+    dur = random.uniform(0.04, 0.12)
+    n = int(dur * SAMPLE_RATE)
+    s = np.zeros(n)
+    pos = 0
+    while pos < n:
+        pn = max(2, int(random.uniform(0.003, 0.009) * SAMPLE_RATE))
+        pulse = _bandpass(np.random.randn(pn), 2000, min(6000, SAMPLE_RATE * 0.45))
+        pulse *= np.exp(-np.linspace(0, random.uniform(15, 35), pn))
+        end = min(pos + pn, n)
+        s[pos:end] += pulse[:end - pos]
+        pos += int(random.uniform(0.004, 0.013) * SAMPLE_RATE)
+    s = soft_saturate(s, 1.5)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
+
+
+def _insect_water_bug():
+    """Water strider click: inharmonic pluck, random stereo pan."""
+    freq = random.uniform(1800, 3800)
+    dur = random.uniform(0.015, 0.045)
+    t = _t(dur)
+    s = (np.sin(2 * np.pi * freq * t)
+         + 0.5 * np.sin(2 * np.pi * freq * 1.45 * t))
+    s *= np.exp(-np.linspace(0, random.uniform(20, 50), len(t)))
+    pan = random.uniform(0.15, 0.85)
+    stereo = np.column_stack([s * (1 - pan), s * pan])
+    return stereo / (np.max(np.abs(stereo)) + 1e-9) * 0.65
+
+
+_INSECT_SOUNDS = [
+    ("cricket",     _insect_cricket,     5),
+    ("cicada",      _insect_cicada,      3),
+    ("grasshopper", _insect_grasshopper, 3),
+    ("water_bug",   _insect_water_bug,   2),
+]
+
+
+def make_insects_sequence(target_duration=10.0):
+    names, fns, weights = zip(*_INSECT_SOUNDS)
+    parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
+    while total < target_duration:
+        idx = random.choices(range(len(names)), weights=weights)[0]
+        sig = fns[idx]()
+        gap = random.uniform(0.04 * gap_scale, 0.4 * gap_scale)
+        parts.append(sig)
+        parts.append(silence(gap))
+        total += len(sig) / SAMPLE_RATE + gap
+    return _finalise(np.concatenate(parts), target_duration)
+
+
+# =============================================================================
+# GAMELAN MODE  Balinese/Javanese metallophones with beating pairs
+# =============================================================================
+
+_GAMELAN_ROOTS   = [110, 130.81, 146.83, 164.81, 174.61, 196.0, 220.0, 261.63]
+# Inharmonic partial ratios measured from physical gamelan bars
+_GAMELAN_PARTIALS = [1.0, 2.756, 5.404, 8.933, 13.37]
+_GAMELAN_AMPS     = [1.0, 0.45,  0.25,  0.15,   0.08]
+
+
+def _gamelan_bar(freq=None, dur=None):
+    """Single struck bar: inharmonic partials with random detuning."""
+    if freq is None:
+        freq = random.choice(_GAMELAN_ROOTS)
+    if dur is None:
+        dur = random.uniform(0.6, 2.5)
+    n = int(dur * SAMPLE_RATE)
+    t = np.arange(n) / SAMPLE_RATE
+    s = np.zeros(n)
+    for ratio, amp in zip(_GAMELAN_PARTIALS, _GAMELAN_AMPS):
+        f = freq * ratio
+        if f >= SAMPLE_RATE * 0.45:
+            break
+        f_det = f * (2 ** (random.uniform(-0.5, 0.5) / 1200))
+        decay = random.uniform(3, 8) * ratio
+        s += amp * np.sin(2 * np.pi * f_det * t) * np.exp(-decay * t / dur)
+    # metallic transient
+    atk = min(int(0.004 * SAMPLE_RATE), n)
+    s[:atk] += _bandpass(np.random.randn(atk), 2000, min(8000, SAMPLE_RATE * 0.45)) \
+               * 0.3 * np.linspace(1, 0, atk)
+    s = apply_reverb(s, decay=0.4, num_echoes=4)
+    pan = random.uniform(0.15, 0.85)
+    stereo = np.column_stack([s * np.sqrt(1 - pan), s * np.sqrt(pan)])
+    return stereo / (np.max(np.abs(stereo)) + 1e-9) * 0.75
+
+
+def _gamelan_pair():
+    """Paired bars detuned 6–18 cents for ombak (acoustic beating)."""
+    freq = random.choice(_GAMELAN_ROOTS)
+    freq2 = freq * (2 ** (random.uniform(6, 18) / 1200))
+    dur = random.uniform(0.8, 2.2)
+    b1 = _gamelan_bar(freq, dur)
+    b2 = _gamelan_bar(freq2, dur)
+    n = min(len(b1), len(b2))
+    s = b1[:n] + b2[:n]
+    return s / (np.max(np.abs(s)) + 1e-9) * 0.75
+
+
+def _gamelan_gong():
+    """Low gong: very inharmonic partials, long resonance."""
+    freq = random.uniform(55, 110)
+    dur = random.uniform(1.5, 3.5)
+    n = int(dur * SAMPLE_RATE)
+    t = np.arange(n) / SAMPLE_RATE
+    s = np.zeros(n)
+    for ratio, amp in zip([1.0, 1.51, 2.14, 3.17, 4.56],
+                          [1.0, 0.6,  0.4,  0.25, 0.15]):
+        f = freq * ratio
+        if f >= SAMPLE_RATE * 0.45:
+            break
+        f_det = f * (2 ** (random.uniform(-1.5, 1.5) / 1200))
+        s += amp * np.sin(2 * np.pi * f_det * t) * np.exp(-random.uniform(0.4, 1.2) * ratio * t)
+    atk = min(int(0.008 * SAMPLE_RATE), n)
+    s[:atk] += _bandpass(np.random.randn(atk), 100, 800) * 0.4 * np.linspace(1, 0, atk)
+    pan = random.uniform(0.3, 0.7)
+    stereo = np.column_stack([s * np.sqrt(1 - pan), s * np.sqrt(pan)])
+    return stereo / (np.max(np.abs(stereo)) + 1e-9) * 0.75
+
+
+_GAMELAN_SOUNDS = [
+    ("bar",  _gamelan_bar,  4),
+    ("pair", _gamelan_pair, 4),
+    ("gong", _gamelan_gong, 2),
+]
+
+
+def make_gamelan_sequence(target_duration=10.0):
+    names, fns, weights = zip(*_GAMELAN_SOUNDS)
+    parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 3.0, 0.5)
+    while total < target_duration:
+        idx = random.choices(range(len(names)), weights=weights)[0]
+        sig = fns[idx]()
+        gap = random.uniform(0.1 * gap_scale, 0.7 * gap_scale)
+        parts.append(sig)
+        parts.append(silence(gap))
+        total += len(sig) / SAMPLE_RATE + gap
+    return _finalise(np.concatenate(parts), target_duration)
+
+
+# =============================================================================
+# ARP MODE  synthesizer arpeggiator cycling chord patterns
+# =============================================================================
+
+_ARP_SCALES = {
+    "minor":      [0, 2, 3, 5, 7, 8, 10],
+    "major":      [0, 2, 4, 5, 7, 9, 11],
+    "dorian":     [0, 2, 3, 5, 7, 9, 10],
+    "pentatonic": [0, 3, 5, 7, 10],
+    "diminished": [0, 2, 3, 5, 6, 8, 9, 11],
+}
+
+_ARP_PATTERNS = [
+    [0, 1, 2, 3],          # up
+    [3, 2, 1, 0],          # down
+    [0, 2, 1, 3, 2, 4],    # skip up
+    [0, 2, 4, 2, 0, 2],    # oscillate
+    [0, 1, 2, 3, 2, 1],    # up-down
+    [0, 3, 1, 4, 2, 5],    # wide skip
+]
+
+
+def _arp_note(freq, dur, wave='tri', detune_cents=0.0):
+    """One synthesized arp note with ADSR envelope."""
+    f = freq * (2 ** (detune_cents / 1200))
+    t = _t(dur)
+    n = len(t)
+    phase = np.cumsum(np.full(n, f / SAMPLE_RATE))
+    if wave == 'tri':
+        s = 2 * np.abs(2 * (phase - np.floor(phase + 0.5))) - 1
+    elif wave == 'saw':
+        s = 2 * (phase - np.floor(phase)) - 1
+    else:  # square (soft)
+        s = np.tanh(4 * np.sin(2 * np.pi * phase))
+    atk = int(min(0.008, dur * 0.1) * SAMPLE_RATE)
+    dec = int(min(0.03,  dur * 0.2) * SAMPLE_RATE)
+    rel = int(min(0.04,  dur * 0.3) * SAMPLE_RATE)
+    env = np.ones(n) * 0.7
+    if atk > 0: env[:atk]        = np.linspace(0, 1, atk)
+    if dec > 0: env[atk:atk+dec] = np.linspace(1, 0.7, dec)
+    if rel > 0: env[-rel:]       = np.linspace(0.7, 0, rel)
+    s = _bandpass(s * env, 80, min(8000, SAMPLE_RATE * 0.45))
+    return s
+
+
+def _arp_phrase():
+    """One arpeggio phrase: scale + root + pattern + synth voice."""
+    scale = random.choice(list(_ARP_SCALES.values()))
+    root_midi = random.randint(48, 72)   # C3–C5
+    # Build 3-octave scale as MIDI note numbers → frequencies
+    freqs = []
+    for octave in range(3):
+        for interval in scale:
+            midi = root_midi + interval + 12 * octave
+            freqs.append(440.0 * (2 ** ((midi - 69) / 12)))
+    pattern  = random.choice(_ARP_PATTERNS)
+    wave     = random.choice(['tri', 'saw', 'square'])
+    note_dur = random.uniform(0.04, 0.14)
+    gap_dur  = random.uniform(0.0, 0.012)
+    detune   = random.uniform(-3, 3)
+    parts = []
+    for degree in pattern:
+        idx = min(degree, len(freqs) - 1)
+        note = _arp_note(freqs[idx], note_dur, wave=wave, detune_cents=detune)
+        parts.append(note)
+        if gap_dur > 0:
+            parts.append(np.zeros(int(gap_dur * SAMPLE_RATE)))
+    s = np.concatenate(parts)
+    s = apply_reverb(s, decay=0.15, num_echoes=3)
+    pan = random.uniform(0.25, 0.75)
+    stereo = np.column_stack([s * np.sqrt(1 - pan), s * np.sqrt(pan)])
+    return stereo / (np.max(np.abs(stereo)) + 1e-9) * 0.7
+
+
+def make_arp_sequence(target_duration=10.0):
+    parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.0, 0.15)
+    while total < target_duration:
+        sig = _arp_phrase()
+        gap = random.uniform(0.05 * gap_scale, 0.35 * gap_scale)
+        parts.append(sig)
+        parts.append(silence(gap))
+        total += len(sig) / SAMPLE_RATE + gap
+    return _finalise(np.concatenate(parts), target_duration)
+

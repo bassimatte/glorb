@@ -199,6 +199,30 @@ def generate():
         return send_file(buf, mimetype="audio/wav",
                          as_attachment=False, download_name="glorb_lofi.wav")
 
+    if mode == "modem":
+        audio = bb.make_modem_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_modem.wav")
+
+    if mode == "insects":
+        audio = bb.make_insects_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_insects.wav")
+
+    if mode == "gamelan":
+        audio = bb.make_gamelan_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_gamelan.wav")
+
+    if mode == "arp":
+        audio = bb.make_arp_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_arp.wav")
+
     # ── Glorb (default) → single WAV ─────────────────────────────
     import random
     parts, total = [], 0.0
