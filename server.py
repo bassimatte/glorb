@@ -53,6 +53,11 @@ def _wav_bytes(audio, sample_rate, subtype):
     return buf
 
 
+@app.route("/ping")
+def ping():
+    return "ok", 200
+
+
 @app.route("/")
 def index():
     return render_template("index.html")

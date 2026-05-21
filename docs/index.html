@@ -509,6 +509,22 @@
       box-shadow: 0 0 8px var(--glow);
       transition: width .12s linear;
     }
+
+    /*  Wakeup overlay  */
+    #wakeup-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(9,9,9,0.92);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 18px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .4s;
+    }
+    #wakeup-overlay.visible { opacity: 1; pointer-events: all; }
+    #wakeup-overlay .wu-icon { font-size: 36px; animation: wu-pulse 1.4s ease-in-out infinite; }
+    #wakeup-overlay .wu-title { font-size: 15px; color: var(--fg); letter-spacing: 0.12em; }
+    #wakeup-overlay .wu-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+    @keyframes wu-pulse { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.15)} }
   </style>
 </head>
 <body>
@@ -1278,6 +1294,22 @@
     applyTheme(savedTheme);
     if (ZOOM_STEPS.includes(savedZoom) && savedZoom !== 100) applyZoom(savedZoom);
   })();
+  //  Server wakeup ping (online version only) 
+  (function pingServer() {
+    const overlay = document.getElementById('wakeup-overlay');
+    let wakeTimer = setTimeout(() => overlay.classList.add('visible'), 1200);
+    fetch(GLORB_API_BASE + '/ping', { method: 'GET' })
+      .then(() => { clearTimeout(wakeTimer); overlay.classList.remove('visible'); })
+      .catch(() => {
+        // Keep trying every 3s until server responds
+        const retry = setInterval(() => {
+          fetch(GLORB_API_BASE + '/ping')
+            .then(() => { clearInterval(retry); overlay.classList.remove('visible'); })
+            .catch(() => {});
+        }, 3000);
+      });
+  })();
+
 </script>
 </body>
 </html>
