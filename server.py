@@ -58,6 +58,10 @@ def index():
     return render_template("index.html")
 
 
+# Server-side duration cap — set GLORB_MAX_DURATION=60 on Render free tier
+_MAX_DURATION = float(os.environ.get("GLORB_MAX_DURATION", 300))
+
+
 @app.route("/generate", methods=["POST"])
 def generate():
     data     = request.get_json(silent=True) or {}
@@ -71,7 +75,7 @@ def generate():
     bb.KNOB_BRIGHTNESS = max(0, min(100, int(data.get("brightness", 50))))
     bb.KNOB_CHAOS      = max(0, min(100, int(data.get("chaos",      50))))
 
-    duration = max(1.0, min(duration, 300.0))
+    duration = max(1.0, min(duration, _MAX_DURATION))
     if quality not in bb.QUALITY_PRESETS:
         quality = "high"
 
