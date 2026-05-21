@@ -69,6 +69,27 @@ def generate():
                          as_attachment=False,
                          download_name=f"glorb_nature_{used_variant}.wav")
 
+    # ── Sci-Fi → single WAV ───────────────────────────────────────
+    if mode == "scifi":
+        audio = bb.make_scifi_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_scifi.wav")
+
+    # ── Haptic → single WAV ───────────────────────────────────────
+    if mode == "haptic":
+        audio = bb.make_haptic_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_haptic.wav")
+
+    # ── Radio → single WAV ────────────────────────────────────────
+    if mode == "radio":
+        audio = bb.make_radio_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_radio.wav")
+
     # ── Retro → single WAV ────────────────────────────────────────
     if mode == "retro":
         audio = bb.make_retro_sequence(duration)

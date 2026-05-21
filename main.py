@@ -612,6 +612,317 @@ def make_ui_pack():
 
 
 # =============================================================================
+# SCI-FI MODE — laser zaps, shields, warps, pings, teleporters
+# =============================================================================
+
+def _scifi_laser():
+    """Downward FM chirp — classic laser shot."""
+    dur = random.uniform(0.04, 0.12)
+    f_start = random.uniform(1200, 3000)
+    f_end   = f_start * random.uniform(0.15, 0.45)
+    t = _t(dur)
+    freq_curve = f_start * (f_end / f_start) ** (t / dur)
+    mod = random.uniform(2.0, 5.0) * np.sin(2 * np.pi * freq_curve * 0.5 * t)
+    phase = 2 * np.pi * np.cumsum(freq_curve + mod * freq_curve * 0.1) / SAMPLE_RATE
+    s = np.sin(phase)
+    env = np.exp(-np.linspace(0, random.uniform(15, 40), len(t)))
+    s = soft_saturate(s * env, 1.5)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.75)
+
+
+def _scifi_shield():
+    """Rising chirp + shimmer + reverb — energy shield hit."""
+    dur = random.uniform(0.08, 0.18)
+    f0  = random.uniform(400, 800)
+    f1  = f0 * random.uniform(1.5, 3.0)
+    t   = _t(dur)
+    freq_curve = f0 * (f1 / f0) ** (t / dur)
+    phase = 2 * np.pi * np.cumsum(freq_curve) / SAMPLE_RATE
+    s = np.sin(phase) + 0.3 * np.sin(phase * 2.5)
+    n = len(s)
+    a = max(1, int(0.005 * SAMPLE_RATE))
+    env = np.concatenate([np.linspace(0, 1, a),
+                          np.exp(-np.linspace(0, 10, n - a))])[:n]
+    s = apply_reverb(s * env, decay=0.35, num_echoes=3)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
+
+
+def _scifi_warp():
+    """AM tremolo + pitch sweep + echo — warp drive."""
+    dur = random.uniform(0.2, 0.5)
+    f0  = random.uniform(200, 600)
+    f1  = f0 * random.choice([2.0, 3.0, 0.5])
+    t   = _t(dur)
+    freq_curve = f0 * (f1 / f0) ** (t / dur)
+    phase  = 2 * np.pi * np.cumsum(freq_curve) / SAMPLE_RATE
+    am     = 0.5 + 0.5 * np.sin(2 * np.pi * random.uniform(15, 40) * t)
+    s = np.sin(phase) * am
+    n = len(s)
+    hold = int(n * 0.5)
+    ramp = n - int(0.01 * SAMPLE_RATE) - hold
+    env  = np.concatenate([np.linspace(0, 1, int(0.01 * SAMPLE_RATE)),
+                            np.ones(hold),
+                            np.linspace(1, 0, max(1, ramp))])[:n]
+    s = apply_echo(s * env, delay=random.uniform(0.04, 0.08), feedback=0.35)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
+
+
+def _scifi_ping():
+    """Clean sonar ping with long reverb tail."""
+    freq = random.uniform(800, 2000)
+    dur  = random.uniform(0.15, 0.35)
+    t    = _t(dur)
+    s    = np.sin(2 * np.pi * freq * t)
+    n    = len(s)
+    a    = max(1, int(0.002 * SAMPLE_RATE))
+    env  = np.concatenate([np.linspace(0, 1, a),
+                           np.exp(-np.linspace(0, 12, n - a))])[:n]
+    s    = apply_reverb(s * env, decay=0.4, num_echoes=4)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.6)
+
+
+def _scifi_zap():
+    """Short FM burst — electric arc / energy discharge."""
+    freq = random.uniform(600, 1800)
+    dur  = random.uniform(0.02, 0.06)
+    s    = fm_metallic(freq, dur)
+    s    = apply_envelope(s)
+    s    = soft_saturate(s, random.uniform(2.5, 4.5))
+    s    = add_noise(s, 0.015)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.78)
+
+
+def _scifi_teleport():
+    """Multi-frequency cluster + wobble — matter transporter."""
+    dur   = random.uniform(0.12, 0.28)
+    freqs = [random.uniform(300, 3000) for _ in range(random.randint(3, 6))]
+    s     = sum(np.sin(2 * np.pi * f * _t(dur)) for f in freqs) / len(freqs)
+    n     = len(s)
+    a     = max(1, int(0.02 * SAMPLE_RATE))
+    env   = np.concatenate([np.linspace(0, 1, a),
+                             np.exp(-np.linspace(0, 8, n - a))])[:n]
+    s     = pitch_wobble(s * env, rate_hz=random.uniform(8, 20), depth=0.008)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
+
+
+_SCIFI_SOUNDS = [
+    ("laser",    _scifi_laser,    4),
+    ("shield",   _scifi_shield,   2),
+    ("warp",     _scifi_warp,     1),
+    ("ping",     _scifi_ping,     2),
+    ("zap",      _scifi_zap,      4),
+    ("teleport", _scifi_teleport, 1),
+]
+
+
+def make_scifi_sequence(target_duration=10.0):
+    names, fns, weights = zip(*_SCIFI_SOUNDS)
+    parts, total = [], 0.0
+    while total < target_duration:
+        idx = random.choices(range(len(names)), weights=weights)[0]
+        sig = fns[idx]()
+        gap = random.uniform(0.03, 0.3)
+        parts.append(sig)
+        parts.append(silence(gap))
+        total += len(sig) / SAMPLE_RATE + gap
+    return _finalise(np.concatenate(parts), target_duration)
+
+
+# =============================================================================
+# HAPTIC MODE — micro-impacts, taps, buzzes, thuds, rumbles
+# =============================================================================
+
+def _haptic_tap():
+    """Single soft tap — short low-freq noise burst."""
+    dur = random.uniform(0.008, 0.025)
+    n   = int(dur * SAMPLE_RATE)
+    s   = _lowpass(np.random.randn(n), random.uniform(200, 500))
+    env = np.exp(-np.linspace(0, random.uniform(30, 80), n))
+    s   = (s * env).astype(np.float32)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.8)
+
+
+def _haptic_click():
+    """Hard transient click."""
+    n = int(0.012 * SAMPLE_RATE)
+    s = _bandpass(np.random.randn(n), 600, 3000)
+    env = np.exp(-np.linspace(0, 60, n))
+    s   = (s * env).astype(np.float32)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.88)
+
+
+def _haptic_buzz():
+    """Rapid tap sequence — vibration buzz."""
+    n_taps   = random.randint(3, 8)
+    interval = random.uniform(0.015, 0.04)
+    parts    = []
+    for _ in range(n_taps):
+        n = int(0.01 * SAMPLE_RATE)
+        s = _lowpass(np.random.randn(n), 300) * random.uniform(0.5, 1.0)
+        env = np.exp(-np.linspace(0, 50, n))
+        parts.append((s * env).astype(np.float32))
+        parts.append(np.zeros(int(interval * SAMPLE_RATE), dtype=np.float32))
+    mono = np.concatenate(parts)
+    return to_stereo(mono / (np.max(np.abs(mono)) + 1e-9) * 0.78)
+
+
+def _haptic_thud():
+    """Sub-bass impact thud."""
+    dur  = random.uniform(0.04, 0.1)
+    n    = int(dur * SAMPLE_RATE)
+    freq = random.uniform(40, 100)
+    t    = np.arange(n) / SAMPLE_RATE
+    s    = np.sin(2 * np.pi * freq * t)
+    s   += _lowpass(np.random.randn(n), 200) * 0.4
+    env  = np.exp(-np.linspace(0, random.uniform(20, 50), n))
+    s    = soft_saturate((s * env).astype(np.float32), 2.0)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.85)
+
+
+def _haptic_rumble():
+    """Rolling low-freq burst — motor/rumble."""
+    dur = random.uniform(0.08, 0.2)
+    n   = int(dur * SAMPLE_RATE)
+    s   = _lowpass(np.random.randn(n), 150)
+    am  = 0.6 + 0.4 * np.sin(2 * np.pi * random.uniform(20, 50) * np.arange(n) / SAMPLE_RATE)
+    s   = (s * am).astype(np.float32)
+    a   = max(1, int(0.01 * SAMPLE_RATE))
+    env = np.concatenate([np.linspace(0, 1, a),
+                          np.exp(-np.linspace(0, 8, n - a))])[:n]
+    s   = s * env
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.8)
+
+
+_HAPTIC_SOUNDS = [
+    ("tap",    _haptic_tap,    4),
+    ("click",  _haptic_click,  3),
+    ("buzz",   _haptic_buzz,   2),
+    ("thud",   _haptic_thud,   2),
+    ("rumble", _haptic_rumble, 1),
+]
+
+
+def make_haptic_sequence(target_duration=10.0):
+    names, fns, weights = zip(*_HAPTIC_SOUNDS)
+    parts, total = [], 0.0
+    while total < target_duration:
+        idx = random.choices(range(len(names)), weights=weights)[0]
+        sig = fns[idx]()
+        gap = random.uniform(0.01, 0.15)
+        parts.append(sig)
+        parts.append(silence(gap))
+        total += len(sig) / SAMPLE_RATE + gap
+    return _finalise(np.concatenate(parts), target_duration)
+
+
+# =============================================================================
+# RADIO MODE — static bursts, morse bleeps, tuning sweeps, signal lock
+# =============================================================================
+
+def _radio_static():
+    """Short burst of band-limited noise static."""
+    dur = random.uniform(0.02, 0.15)
+    n   = int(dur * SAMPLE_RATE)
+    s   = _bandpass(np.random.randn(n),
+                    random.uniform(300, 800), random.uniform(2000, 6000)).astype(np.float32)
+    env = np.exp(-np.linspace(0, random.uniform(2, 10), n)) * random.uniform(0.4, 1.0)
+    s   = s * env
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
+
+
+def _radio_bleep():
+    """Morse-style sine blip with flat-top envelope."""
+    freq = random.uniform(600, 1400)
+    dur  = random.uniform(0.04, 0.12)
+    t    = _t(dur)
+    s    = np.sin(2 * np.pi * freq * t)
+    n    = len(s)
+    a    = max(1, int(0.005 * SAMPLE_RATE))
+    env  = np.concatenate([np.linspace(0, 1, a),
+                            np.ones(max(0, n - 2 * a)),
+                            np.linspace(1, 0, a)])[:n]
+    s    = s * env + np.random.randn(n) * 0.025
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
+
+
+def _radio_sweep():
+    """Tuning sweep — scanning across frequencies with noise."""
+    dur      = random.uniform(0.15, 0.4)
+    t        = _t(dur)
+    f_start  = random.uniform(200, 600)
+    f_end    = f_start * random.uniform(3.0, 8.0)
+    freq_curve = f_start + (f_end - f_start) * (t / dur)
+    phase    = 2 * np.pi * np.cumsum(freq_curve) / SAMPLE_RATE
+    s        = np.sin(phase) * 0.6 + np.random.randn(len(t)) * 0.3
+    n        = len(s)
+    hold     = int(n * 0.6)
+    ramp     = max(1, n - int(0.02 * SAMPLE_RATE) - hold)
+    env      = np.concatenate([np.linspace(0, 1, int(0.02 * SAMPLE_RATE)),
+                                np.ones(hold),
+                                np.linspace(1, 0, ramp)])[:n]
+    s        = s * env
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
+
+
+def _radio_lock():
+    """Sweep snaps to a clean locked tone — tuner lock."""
+    scan_dur   = random.uniform(0.1, 0.2)
+    lock_dur   = random.uniform(0.05, 0.12)
+    f_target   = random.uniform(800, 1600)
+    f_start    = f_target * random.uniform(1.5, 3.0)
+    t_scan     = _t(scan_dur)
+    freq_curve = f_start + (f_target - f_start) * (t_scan / scan_dur)
+    phase_scan = 2 * np.pi * np.cumsum(freq_curve) / SAMPLE_RATE
+    scan       = np.sin(phase_scan) + np.random.randn(len(t_scan)) * 0.2
+    t_lock     = _t(lock_dur)
+    lock       = np.sin(2 * np.pi * f_target * t_lock)
+    n_lock     = len(lock)
+    a          = max(1, int(0.005 * SAMPLE_RATE))
+    env_lock   = np.concatenate([np.linspace(0, 1, a),
+                                  np.exp(-np.linspace(0, 6, n_lock - a))])[:n_lock]
+    s          = np.concatenate([scan, lock * env_lock])
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
+
+
+def _radio_crackle():
+    """Intermittent noise crackle — poor reception dropout."""
+    dur = random.uniform(0.06, 0.2)
+    n   = int(dur * SAMPLE_RATE)
+    s   = np.zeros(n, dtype=np.float32)
+    pos = 0
+    while pos < n:
+        on_len  = int(random.uniform(0.005, 0.02) * SAMPLE_RATE)
+        off_len = int(random.uniform(0.005, 0.04) * SAMPLE_RATE)
+        end     = min(pos + on_len, n)
+        chunk   = _bandpass(np.random.randn(end - pos), 500, 5000).astype(np.float32)
+        s[pos:end] = chunk * random.uniform(0.2, 0.8)
+        pos += on_len + off_len
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
+
+
+_RADIO_SOUNDS = [
+    ("static",  _radio_static,  3),
+    ("bleep",   _radio_bleep,   4),
+    ("sweep",   _radio_sweep,   2),
+    ("lock",    _radio_lock,    2),
+    ("crackle", _radio_crackle, 3),
+]
+
+
+def make_radio_sequence(target_duration=10.0):
+    names, fns, weights = zip(*_RADIO_SOUNDS)
+    parts, total = [], 0.0
+    while total < target_duration:
+        idx = random.choices(range(len(names)), weights=weights)[0]
+        sig = fns[idx]()
+        gap = random.uniform(0.02, 0.25)
+        parts.append(sig)
+        parts.append(silence(gap))
+        total += len(sig) / SAMPLE_RATE + gap
+    return _finalise(np.concatenate(parts), target_duration)
+
+
+# =============================================================================
 # Shared helpers
 # =============================================================================
 
