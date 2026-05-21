@@ -89,6 +89,16 @@
       transition: background .3s, color .3s;
     }
 
+    /* ── Reactive background canvas ─────────────────────────────── */
+    #bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity .6s;
+    }
+    #bg-canvas.idle { opacity: 0; }
+
     /* ── Layout ─────────────────────────────────────────────────── */
     .shell {
       min-height: 100vh;
@@ -98,6 +108,7 @@
       justify-content: center;
       gap: 30px;
       padding: 28px 24px;
+      position: relative; z-index: 1;
     }
 
     /* ── Header ─────────────────────────────────────────────────── */
@@ -464,6 +475,7 @@
 </head>
 <body>
 <!-- ═══════════ GLORB ═══════════ -->
+<canvas id="bg-canvas" class="idle"></canvas>
 <div class="shell">
 
   <header>
@@ -762,6 +774,7 @@
     sourceNode.connect(analyser); analyser.connect(audioCtx.destination);
     const startedAt = audioCtx.currentTime;
     sourceNode.start(); isPlaying = true;
+    startBgAnim();
     return startedAt;
   }
 
@@ -772,6 +785,7 @@
     isPlaying = false;
     updateAllPlayButtons();
     if (audioBuffer) drawWaveform(audioBuffer, 1);
+    stopBgAnim();
   }
 
   function updateAllPlayButtons() {
@@ -790,6 +804,108 @@
       animId = requestAnimationFrame(tick);
     }
     animId = requestAnimationFrame(tick);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     REACTIVE BACKGROUND
+  ══════════════════════════════════════════════════════════════════ */
+  const bgCanvas = document.getElementById('bg-canvas');
+  const bgCtx    = bgCanvas.getContext('2d');
+  let bgAnimId   = null;
+  let bgTime     = 0;
+
+  // Three slow-moving blobs, each tracks a different frequency band
+  const BG_BLOBS = [
+    { x: 0.3, y: 0.4, vx: 0.00018, vy: 0.00012, band: 'bass',  size: 0.52 },
+    { x: 0.7, y: 0.6, vx:-0.00014, vy: 0.00020, band: 'mid',   size: 0.42 },
+    { x: 0.5, y: 0.3, vx: 0.00010, vy:-0.00015, band: 'treble',size: 0.30 },
+  ];
+
+  function _getFreqBands() {
+    if (!analyser) return { bass: 0, mid: 0, treble: 0 };
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
+    const binHz = (audioCtx.sampleRate / 2) / data.length;
+    let bass = 0, mid = 0, treble = 0, nb = 0, nm = 0, nt = 0;
+    for (let i = 0; i < data.length; i++) {
+      const hz = i * binHz;
+      if (hz < 200)        { bass   += data[i]; nb++; }
+      else if (hz < 2000)  { mid    += data[i]; nm++; }
+      else if (hz < 10000) { treble += data[i]; nt++; }
+    }
+    return {
+      bass:   nb ? (bass   / nb) / 255 : 0,
+      mid:    nm ? (mid    / nm) / 255 : 0,
+      treble: nt ? (treble / nt) / 255 : 0,
+    };
+  }
+
+  function startBgAnim() {
+    bgCanvas.classList.remove('idle');
+    resizeBgCanvas();
+
+    function frame() {
+      bgAnimId = requestAnimationFrame(frame);
+      bgTime++;
+      const W = bgCanvas.width, H = bgCanvas.height;
+      const bands = _getFreqBands();
+      const bandVal = { bass: bands.bass, mid: bands.mid, treble: bands.treble };
+
+      // Fade previous frame slightly for trail effect
+      bgCtx.fillStyle = 'rgba(0,0,0,0.06)';
+      bgCtx.fillRect(0, 0, W, H);
+
+      // Accent color from CSS
+      const [ar, ag, ab] = hexToRgb(getCSSVar('--accent'));
+
+      BG_BLOBS.forEach((b, i) => {
+        // Drift position
+        b.x += b.vx; b.y += b.vy;
+        if (b.x < 0.05 || b.x > 0.95) b.vx *= -1;
+        if (b.y < 0.05 || b.y > 0.95) b.vy *= -1;
+
+        const energy = bandVal[b.band];
+        const pulse  = 1 + energy * 1.4;
+        const r      = Math.min(W, H) * b.size * pulse * 0.5;
+        const cx     = b.x * W, cy = b.y * H;
+
+        // Hue-shifted accent based on energy + time
+        const hueShift = (i * 40 + bgTime * 0.08 + energy * 80) % 360;
+        const [hr, hg, hb] = hslToRgb(hueShift, 100, 55);
+        const alpha = 0.04 + energy * 0.10;
+
+        const grad = bgCtx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        grad.addColorStop(0,   `rgba(${hr},${hg},${hb},${alpha})`);
+        grad.addColorStop(0.5, `rgba(${ar},${ag},${ab},${alpha * 0.4})`);
+        grad.addColorStop(1,   'rgba(0,0,0,0)');
+
+        bgCtx.beginPath();
+        bgCtx.arc(cx, cy, r, 0, Math.PI * 2);
+        bgCtx.fillStyle = grad;
+        bgCtx.fill();
+      });
+    }
+    frame();
+  }
+
+  function stopBgAnim() {
+    if (bgAnimId) { cancelAnimationFrame(bgAnimId); bgAnimId = null; }
+    bgCanvas.classList.add('idle');
+    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  }
+
+  function resizeBgCanvas() {
+    bgCanvas.width  = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', () => { if (bgAnimId) resizeBgCanvas(); });
+
+  function hslToRgb(h, s, l) {
+    s /= 100; l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))));
+    return [f(0), f(8), f(4)];
   }
 
   /* ══════════════════════════════════════════════════════════════════
