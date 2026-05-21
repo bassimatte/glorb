@@ -8,7 +8,9 @@
     /* ── Reset & base ───────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── Theme tokens ────────────────────────────────────────────── */
     :root {
+      /* Glorb (default dark) */
       --bg:      #090909;
       --surface: #111111;
       --border:  #1e1e1e;
@@ -18,7 +20,64 @@
       --danger:  #ff3b5c;
       --radius:  6px;
       --font:    'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --glow:    rgba(0,255,136,.25);
+      --glow-btn:rgba(0,255,136,.2);
+      --glow-btn-hover: rgba(0,255,136,.35);
     }
+    /* Vapor — synthwave, hot-pink neon */
+    :root[data-theme="vapor"] {
+      --bg:      #0d0015;
+      --surface: #130025;
+      --border:  #2d0050;
+      --text:    #f0d0ff;
+      --muted:   #6644aa;
+      --accent:  #ff2d78;
+      --danger:  #ff6ba0;
+      --glow:    rgba(255,45,120,.28);
+      --glow-btn:rgba(255,45,120,.2);
+      --glow-btn-hover: rgba(255,45,120,.4);
+    }
+    /* Amber — phosphor CRT monitor */
+    :root[data-theme="amber"] {
+      --bg:      #0a0800;
+      --surface: #130f00;
+      --border:  #2a2000;
+      --text:    #ffe8b0;
+      --muted:   #554400;
+      --accent:  #ffb347;
+      --danger:  #ff5522;
+      --glow:    rgba(255,179,71,.25);
+      --glow-btn:rgba(255,179,71,.2);
+      --glow-btn-hover: rgba(255,179,71,.38);
+    }
+    /* Glacier — cold sci-fi */
+    :root[data-theme="glacier"] {
+      --bg:      #050810;
+      --surface: #080e1c;
+      --border:  #0e1c30;
+      --text:    #c8e8ff;
+      --muted:   #2a4a6a;
+      --accent:  #4fc3f7;
+      --danger:  #ff6b6b;
+      --glow:    rgba(79,195,247,.25);
+      --glow-btn:rgba(79,195,247,.2);
+      --glow-btn-hover: rgba(79,195,247,.38);
+    }
+    /* ── Light mode overlay (any theme) ─────────────────────────── */
+    :root[data-light] {
+      --bg:      #f2f2f2;
+      --surface: #ffffff;
+      --border:  #d8d8d8;
+      --text:    #111111;
+      --muted:   #999999;
+      --glow:    rgba(0,0,0,.06);
+      --glow-btn:rgba(0,0,0,.06);
+      --glow-btn-hover: rgba(0,0,0,.12);
+    }
+    :root[data-theme="vapor"][data-light]   { --accent: #cc0055; --danger: #e0004f; }
+    :root[data-theme="amber"][data-light]   { --accent: #c07800; --danger: #cc3300; }
+    :root[data-theme="glacier"][data-light] { --accent: #0077aa; --danger: #cc3333; }
+    :root[data-light]:not([data-theme])     { --accent: #00aa55; --danger: #cc2244; }
 
     html, body {
       height: 100%;
@@ -27,6 +86,7 @@
       font-family: var(--font);
       font-size: 13px;
       letter-spacing: 0.03em;
+      transition: background .3s, color .3s;
     }
 
     /* ── Layout ─────────────────────────────────────────────────── */
@@ -52,7 +112,7 @@
       letter-spacing: -0.04em;
       color: var(--accent);
       line-height: 1;
-      text-shadow: 0 0 40px rgba(0,255,136,.25);
+      text-shadow: 0 0 40px var(--glow);
     }
 
     .tagline {
@@ -189,12 +249,12 @@
       text-transform: uppercase;
       cursor: pointer;
       transition: opacity .15s, transform .1s, box-shadow .15s;
-      box-shadow: 0 0 24px rgba(0,255,136,.2);
+      box-shadow: 0 0 24px var(--glow-btn);
     }
     #btn-generate:hover:not(:disabled) {
       opacity: .88;
       transform: translateY(-1px);
-      box-shadow: 0 0 36px rgba(0,255,136,.35);
+      box-shadow: 0 0 36px var(--glow-btn-hover);
     }
     #btn-generate:active:not(:disabled) { transform: translateY(0); }
     #btn-generate:disabled { opacity: .35; cursor: not-allowed; }
@@ -384,6 +444,22 @@
         <span class="chevron">▾</span>
       </button>
       <div id="settings-panel">
+        <div class="row" style="margin-bottom:14px">
+          <span class="label">Appearance</span>
+          <div class="pills">
+            <button class="pill active" id="btn-dark">Dark</button>
+            <button class="pill" id="btn-light">Light</button>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:14px">
+          <span class="label">Theme</span>
+          <div class="pills" id="theme-pills">
+            <button class="pill active" data-theme="">Glorb</button>
+            <button class="pill" data-theme="vapor">Vapor</button>
+            <button class="pill" data-theme="amber">Amber</button>
+            <button class="pill" data-theme="glacier">Glacier</button>
+          </div>
+        </div>
         <div class="row">
           <span class="label">Quality</span>
           <div class="pills" id="quality-pills">
@@ -432,7 +508,7 @@
   const sliderDur   = document.getElementById('slider-dur');
   const durVal      = document.getElementById('dur-val');
   const statusEl    = document.getElementById('status');
-  const pills       = document.querySelectorAll('.pill');
+  const pills       = document.querySelectorAll('#quality-pills .pill');
   const vizOverlay  = document.getElementById('viz-overlay');
   const vizCanvas   = document.getElementById('viz-canvas');
   const vizCtx      = vizCanvas.getContext('2d');
@@ -478,6 +554,55 @@
     settingsPanel.classList.toggle('open');
   });
 
+  /* ── Theme & light/dark ─────────────────────────────────────────── */
+  const root       = document.documentElement;
+  const themePills = document.querySelectorAll('#theme-pills .pill');
+  const btnDark    = document.getElementById('btn-dark');
+  const btnLight   = document.getElementById('btn-light');
+
+  function applyTheme(theme, light) {
+    if (theme) root.setAttribute('data-theme', theme);
+    else       root.removeAttribute('data-theme');
+    if (light) root.setAttribute('data-light', '');
+    else       root.removeAttribute('data-light');
+    localStorage.setItem('glorb-theme', theme || '');
+    localStorage.setItem('glorb-light', light ? '1' : '');
+    // Redraw idle line with new colors
+    if (!audioBuffer) drawIdle();
+    else drawWaveform(audioBuffer, 1);
+  }
+
+  themePills.forEach(p => {
+    p.addEventListener('click', () => {
+      themePills.forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      applyTheme(p.dataset.theme, root.hasAttribute('data-light'));
+    });
+  });
+
+  btnDark.addEventListener('click', () => {
+    btnDark.classList.add('active');
+    btnLight.classList.remove('active');
+    applyTheme(root.getAttribute('data-theme') || '', false);
+  });
+  btnLight.addEventListener('click', () => {
+    btnLight.classList.add('active');
+    btnDark.classList.remove('active');
+    applyTheme(root.getAttribute('data-theme') || '', true);
+  });
+
+  // Restore persisted theme on load
+  (function restoreTheme() {
+    const t = localStorage.getItem('glorb-theme') || '';
+    const l = localStorage.getItem('glorb-light') === '1';
+    if (t) {
+      const pill = [...themePills].find(p => p.dataset.theme === t);
+      if (pill) { themePills.forEach(x => x.classList.remove('active')); pill.classList.add('active'); }
+    }
+    if (l) { btnLight.classList.add('active'); btnDark.classList.remove('active'); }
+    applyTheme(t, l);
+  })();
+
   /* ── Quality pills ──────────────────────────────────────────────── */
   pills.forEach(p => {
     p.addEventListener('click', () => {
@@ -494,14 +619,20 @@
   }
 
   /* ── Waveform drawing (main UI) ─────────────────────────────────── */
+  function getCSSVar(name) {
+    return getComputedStyle(root).getPropertyValue(name).trim();
+  }
+
   function drawWaveform(buffer, progress = 1) {
     const W = canvas.width, H = canvas.height;
     ctx2d.clearRect(0, 0, W, H);
     const data  = buffer.getChannelData(0);
     const step  = Math.ceil(data.length / W);
     const drawn = Math.floor(W * progress);
+    const accentDim = getCSSVar('--border');
+    const accent    = getCSSVar('--accent');
 
-    ctx2d.strokeStyle = '#1e3a2a';
+    ctx2d.strokeStyle = accentDim;
     ctx2d.lineWidth   = 1.5;
     ctx2d.beginPath();
     for (let x = 0; x < W; x++) {
@@ -513,8 +644,8 @@
     ctx2d.stroke();
 
     if (drawn > 0) {
-      ctx2d.strokeStyle = '#00ff88';
-      ctx2d.shadowColor = '#00ff88';
+      ctx2d.strokeStyle = accent;
+      ctx2d.shadowColor = accent;
       ctx2d.shadowBlur  = 6;
       ctx2d.lineWidth   = 1.5;
       ctx2d.beginPath();
@@ -532,7 +663,7 @@
   function drawIdle() {
     const W = canvas.width, H = canvas.height;
     ctx2d.clearRect(0, 0, W, H);
-    ctx2d.strokeStyle = '#1e1e1e';
+    ctx2d.strokeStyle = getCSSVar('--border');
     ctx2d.lineWidth = 1;
     ctx2d.beginPath();
     ctx2d.moveTo(0, H/2); ctx2d.lineTo(W, H/2);
@@ -720,14 +851,22 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && vizActive) closeViz(); });
 
   /* ── Visualizer draw loop ───────────────────────────────────────── */
+  function hexToRgb(hex) {
+    hex = hex.replace('#', '').trim();
+    if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+    const n = parseInt(hex, 16);
+    return [(n>>16)&255, (n>>8)&255, n&255];
+  }
+
   function drawViz() {
     const W = vizCanvas.offsetWidth;
     const H = vizCanvas.offsetHeight;
     const cx = W / 2, cy = H / 2;
+    const [ar, ag, ab] = hexToRgb(getCSSVar('--accent'));
 
     const freqData  = new Uint8Array(analyser.frequencyBinCount);
     const timeData  = new Uint8Array(analyser.fftSize);
-    const N_BARS    = 180;   // radial frequency bars
+    const N_BARS    = 180;
     const INNER_R   = Math.min(W, H) * 0.18;
     const MAX_BAR_H = Math.min(W, H) * 0.28;
     const RING_R    = Math.min(W, H) * 0.48;
@@ -739,32 +878,26 @@
       analyser.getByteFrequencyData(freqData);
       analyser.getByteTimeDomainData(timeData);
 
-      // Fade trail (dark translucent fill instead of clear)
       vizCtx.fillStyle = 'rgba(0,0,0,0.18)';
       vizCtx.fillRect(0, 0, W, H);
 
       // ── Radial frequency bars ──────────────────────────────────── //
       for (let i = 0; i < N_BARS; i++) {
-        const angle   = (i / N_BARS) * Math.PI * 2 - Math.PI / 2;
-        const binIdx  = Math.floor((i / N_BARS) * (freqData.length * 0.75));
-        const amp     = freqData[binIdx] / 255;
-        const barH    = amp * MAX_BAR_H;
-        const alpha   = 0.5 + amp * 0.5;
-        const bright  = Math.floor(amp * 255);
-
-        // Color: deep green → bright cyan-white with amplitude
-        const r = Math.floor(amp * 80);
-        const g = Math.floor(180 + amp * 75);
-        const b = Math.floor(amp * 160);
-
+        const angle  = (i / N_BARS) * Math.PI * 2 - Math.PI / 2;
+        const binIdx = Math.floor((i / N_BARS) * (freqData.length * 0.75));
+        const amp    = freqData[binIdx] / 255;
+        const barH   = amp * MAX_BAR_H;
+        const alpha  = 0.5 + amp * 0.5;
+        const r = Math.floor(ar * (0.3 + amp * 0.7));
+        const g = Math.floor(ag * (0.3 + amp * 0.7));
+        const b = Math.floor(ab * (0.3 + amp * 0.7));
         const x1 = cx + Math.cos(angle) * INNER_R;
         const y1 = cy + Math.sin(angle) * INNER_R;
         const x2 = cx + Math.cos(angle) * (INNER_R + barH);
         const y2 = cy + Math.sin(angle) * (INNER_R + barH);
-
         vizCtx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
         vizCtx.lineWidth   = (W / N_BARS) * 0.7;
-        vizCtx.shadowColor = `rgba(0,255,136,${amp * 0.6})`;
+        vizCtx.shadowColor = `rgba(${ar},${ag},${ab},${amp * 0.6})`;
         vizCtx.shadowBlur  = amp * 18;
         vizCtx.beginPath();
         vizCtx.moveTo(x1, y1);
@@ -775,9 +908,9 @@
 
       // ── Oscilloscope ring ──────────────────────────────────────── //
       const sliceAngle = (Math.PI * 2) / timeData.length;
-      vizCtx.strokeStyle = 'rgba(0,255,136,0.55)';
+      vizCtx.strokeStyle = `rgba(${ar},${ag},${ab},0.55)`;
       vizCtx.lineWidth   = 1.5;
-      vizCtx.shadowColor = '#00ff88';
+      vizCtx.shadowColor = getCSSVar('--accent');
       vizCtx.shadowBlur  = 8;
       vizCtx.beginPath();
       for (let i = 0; i < timeData.length; i++) {
@@ -796,17 +929,17 @@
       const avgFreq = freqData.slice(0, 8).reduce((a,b) => a+b, 0) / 8 / 255;
       const pulseR  = INNER_R * (0.7 + avgFreq * 0.6);
       const grad    = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, pulseR);
-      grad.addColorStop(0,   `rgba(0,255,136,${0.15 + avgFreq * 0.3})`);
-      grad.addColorStop(1,   'rgba(0,0,0,0)');
+      grad.addColorStop(0, `rgba(${ar},${ag},${ab},${0.15 + avgFreq * 0.3})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
       vizCtx.fillStyle = grad;
       vizCtx.beginPath();
       vizCtx.arc(cx, cy, pulseR, 0, Math.PI * 2);
       vizCtx.fill();
 
       // ── GLORB wordmark ─────────────────────────────────────────── //
-      vizCtx.fillStyle = `rgba(0,255,136,${0.08 + avgFreq * 0.12})`;
-      vizCtx.font      = `900 ${Math.floor(Math.min(W,H) * 0.055)}px 'SF Mono','Fira Code',monospace`;
-      vizCtx.textAlign = 'center';
+      vizCtx.fillStyle    = `rgba(${ar},${ag},${ab},${0.08 + avgFreq * 0.12})`;
+      vizCtx.font         = `900 ${Math.floor(Math.min(W,H) * 0.055)}px 'SF Mono','Fira Code',monospace`;
+      vizCtx.textAlign    = 'center';
       vizCtx.textBaseline = 'middle';
       vizCtx.letterSpacing = '-0.04em';
       vizCtx.fillText('GLORB', cx, cy);
