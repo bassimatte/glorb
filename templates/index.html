@@ -964,8 +964,8 @@
       tbtnPlay.textContent = isPlaying ? '■ STOP' : '▶ PLAY';
       tbtnPlay.classList.toggle('playing', isPlaying);
     }
-    const synthPlay = document.getElementById('synth-play');
-    if (synthPlay) synthPlay.classList.toggle('playing', isPlaying);
+    const sp = document.getElementById('synth-play');
+    if (sp) sp.classList.toggle('playing', isPlaying);
     if (isPlaying) startVUMeter(); else stopVUMeter();
     if (isPlaying) animateSynthLEDs(); else stopSynthLEDs();
   }
@@ -1207,7 +1207,8 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
-     UI 2 — SYNTH PANEL (was UI 3)
+     UI 2 — SYNTH PANEL
+  ══════════════════════════════════════════════════════════════════ */
   const synthGen    = document.getElementById('synth-gen');
   const synthPlay   = document.getElementById('synth-play');
   const synthDl     = document.getElementById('synth-dl');
