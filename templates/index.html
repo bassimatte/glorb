@@ -312,18 +312,63 @@
     #status.active { color: var(--accent); }
     #status.error  { color: var(--danger); }
 
-    /* ── Floating gear ───────────────────────────────────────────── */
-    #float-gear {
-      position: fixed; bottom: 24px; right: 24px; z-index: 100;
+    /* ── Floating gear + info ─────────────────────────────────────── */
+    #float-gear, #float-info {
+      position: fixed; bottom: 24px; z-index: 100;
       width: 38px; height: 38px; border-radius: 50%;
       background: var(--surface); border: 1px solid var(--border);
       color: var(--muted); font-size: 15px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: all .2s;
     }
-    #float-gear:hover, #float-gear.open {
+    #float-gear { right: 24px; }
+    #float-info  { right: 70px; font-size: 17px; font-weight: 700; font-style: italic; }
+    #float-gear:hover, #float-gear.open,
+    #float-info:hover,  #float-info.open {
       color: var(--accent); border-color: var(--accent);
     }
+    /* ── Info modal ───────────────────────────────────────────────── */
+    #info-modal {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.72); align-items: center; justify-content: center;
+    }
+    #info-modal.open { display: flex; }
+    #info-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px 36px 28px;
+      max-width: 560px; width: 92%; position: relative;
+      box-shadow: 0 16px 64px rgba(0,0,0,.8);
+      max-height: 88vh; overflow-y: auto;
+    }
+    #info-box h2 {
+      font-size: 18px; color: var(--accent); letter-spacing: .1em;
+      text-transform: uppercase; margin: 0 0 6px;
+    }
+    #info-box .info-sub {
+      font-size: 11px; color: var(--muted); letter-spacing: .14em;
+      text-transform: uppercase; margin-bottom: 22px;
+    }
+    #info-box h3 {
+      font-size: 11px; color: var(--accent); letter-spacing: .15em;
+      text-transform: uppercase; margin: 20px 0 7px;
+    }
+    #info-box p, #info-box li {
+      font-size: 12.5px; color: var(--fg); line-height: 1.7; margin: 0 0 6px;
+    }
+    #info-box ul { padding-left: 18px; margin: 0; }
+    #info-box li { margin-bottom: 4px; }
+    #info-box .info-credit {
+      margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--muted); letter-spacing: .12em;
+      text-transform: uppercase; text-align: center;
+    }
+    #info-close {
+      position: absolute; top: 14px; right: 16px;
+      background: none; border: none; color: var(--muted);
+      font-size: 18px; cursor: pointer; padding: 4px 8px;
+      transition: color .15s;
+    }
+    #info-close:hover { color: var(--fg); }
     #float-drawer {
       position: fixed; bottom: 70px; right: 24px; z-index: 99;
       background: var(--surface); border: 1px solid var(--border);
@@ -439,7 +484,67 @@
 </div><!-- .shell -->
 
 <!-- ═══════════ FLOATING SETTINGS ═══════════ -->
+<button id="float-info">i</button>
 <button id="float-gear">⚙</button>
+<div id="float-drawer">
+
+<!-- ═══════════ INFO MODAL ═══════════ -->
+<div id="info-modal">
+  <div id="info-box">
+    <button id="info-close">✕</button>
+    <h2>Glorb</h2>
+    <div class="info-sub">Generative Sound Synthesiser</div>
+
+    <p>Glorb is a browser-based generative audio app powered by a Python synthesis engine. Every sound is built from scratch in real-time — no samples, no loops, pure mathematics.</p>
+
+    <h3>Synthesis Engine</h3>
+    <p>The backend runs on <strong>NumPy</strong> and <strong>SciPy</strong> in Python. All waveforms are computed as floating-point arrays at 44 100 Hz stereo, then exported as 16-bit or 32-bit WAV and streamed to the browser.</p>
+    <ul>
+      <li><strong>Additive synthesis</strong> — multiple sine partials summed with individual envelopes</li>
+      <li><strong>FM synthesis</strong> — frequency modulation for metallic, bell, and sci-fi timbres</li>
+      <li><strong>Subtractive synthesis</strong> — filtered white/pink noise via Butterworth bandpass and lowpass filters</li>
+      <li><strong>Granular synthesis</strong> — stochastic grain clouds: small overlapping windows of noise or tone, scattered in time and pitch</li>
+      <li><strong>Physical modelling</strong> — mass-spring-damper resonators for plucked strings, bells, and impact transients</li>
+      <li><strong>Karplus-Strong</strong> — delay-line feedback for plucked and percussive string sounds</li>
+      <li><strong>Noise shaping</strong> — shaped random walks for breath, wind, rain, and texture layers</li>
+    </ul>
+
+    <h3>Signal Processing</h3>
+    <ul>
+      <li><strong>ADSR envelopes</strong> — attack / decay / sustain / release on every voice</li>
+      <li><strong>Reverb</strong> — multi-tap Schroeder comb + allpass reverberator</li>
+      <li><strong>Echo / delay</strong> — feedback delay lines with variable decay</li>
+      <li><strong>Soft saturation</strong> — tanh waveshaper for analogue warmth</li>
+      <li><strong>Pitch wobble</strong> — LFO-modulated frequency drift for organic movement</li>
+      <li><strong>Stereo panning</strong> — randomised left/right placement per sound event</li>
+    </ul>
+
+    <h3>17 Sound Worlds</h3>
+    <ul>
+      <li><strong>Glorb</strong> — abstract blip/bloop electronic tones</li>
+      <li><strong>Retro</strong> — 8-bit chiptune square and pulse waves</li>
+      <li><strong>Nature</strong> — birdsong, wind, rain, and forest textures</li>
+      <li><strong>Sci-Fi</strong> — phasers, warp drives, and laser bursts</li>
+      <li><strong>Haptic</strong> — tactile vibration pulses and clicks</li>
+      <li><strong>Radio</strong> — AM/FM static, morse, and transmission artefacts</li>
+      <li><strong>Foley</strong> — footsteps, paper, keys, and everyday impacts</li>
+      <li><strong>Underwater</strong> — sonar pings, bubble trains, deep pressure tones</li>
+      <li><strong>Weather</strong> — thunder, lightning crackle, rain intensity layers</li>
+      <li><strong>Bell</strong> — marimba, tubular bells, and resonant metal strikes</li>
+      <li><strong>Bass</strong> — deep sub-bass pulses and 808-style low-end hits</li>
+      <li><strong>Glitch</strong> — buffer corruption, bit-crush artefacts, digital stutter</li>
+      <li><strong>Pinball</strong> — flippers, bumpers, drain, and mechanical clicks</li>
+      <li><strong>Horror</strong> — dissonant drones, breath, reversed tails, and tension builders</li>
+      <li><strong>Granular</strong> — scattered grain clouds across noise and pitched sources</li>
+      <li><strong>Lo-Fi</strong> — vinyl crackle, tape wow/flutter, degraded telephone bandwidth</li>
+    </ul>
+
+    <h3>Playback</h3>
+    <p>Audio is decoded and played via the <strong>Web Audio API</strong>. Playback loops continuously until stopped. The waveform display and visualiser use <strong>Canvas 2D</strong> and a real-time <strong>AnalyserNode</strong> FFT.</p>
+
+    <div class="info-credit">produced by Matteo Bassi</div>
+  </div>
+</div>
 <div id="float-drawer">
   <div class="dr">
     <span class="dr-label">Appearance</span>
@@ -510,6 +615,15 @@
       floatDrawer.classList.remove('open');
     }
   });
+
+  /* ── Info modal ─────────────────────────────────────────────────── */
+  const floatInfo = document.getElementById('float-info');
+  const infoModal = document.getElementById('info-modal');
+  const infoClose = document.getElementById('info-close');
+  floatInfo.addEventListener('click', () => infoModal.classList.add('open'));
+  infoClose.addEventListener('click', () => infoModal.classList.remove('open'));
+  infoModal.addEventListener('click', e => { if (e.target === infoModal) infoModal.classList.remove('open'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') infoModal.classList.remove('open'); });
 
   /* ══════════════════════════════════════════════════════════════════
      LIGHT / DARK
