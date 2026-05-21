@@ -1156,6 +1156,7 @@
     tapePlay.textContent = '■ STOP'; tapePlay.classList.add('go');
     tapeStat.textContent = 'PLAYING'; tapeStat.className = 'playing';
     startReelSpin(true);
+    startVUMeter();
     startProgressLoop(startedAt, p => {
       if (!isPlaying) { stopReelSpin(); tapeStat.textContent = 'DONE'; tapeStat.className = ''; }
     });
