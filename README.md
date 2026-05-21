@@ -1,67 +1,94 @@
 # GLORB
 
-**Organic sound generator.** Synthesizes random sequences of blips, blops, zaps, clicks and bloops — each one unique, each one alive.
+**Organic sound generator** by Matteo Bassi. Synthesizes random sequences of blips, blops, zaps, clicks and bloops — each one unique, each one alive.
+
+🌐 **Live:** https://bassimatte.github.io/glorb/
 
 ---
 
 ## What it does
 
-Glorb generates short electronic sounds with an organic, analog feel using a layered synthesis engine:
+Glorb generates electronic sounds with an organic, analog feel across **17 sound worlds**:
 
-- **FM synthesis** — frequency modulation for metallic, complex tones
-- **Additive harmonics** — stacked partials for bright, bell-like textures
-- **Chirps** — frequency sweeps for classic blip/zap shapes
-- **Pitch wobble** — subtle LFO vibrato that removes the frozen, robotic feel
-- **Tanh saturation** — analog warmth and soft clipping
-- **Noise floor** — tiny circuit hiss for air and texture
-- **Comb reverb + echo** — space and depth
-- **Haas stereo widening** — natural stereo image via L/R micro-delay
+| Mode | Description |
+|---|---|
+| **Glorb** | Abstract blip/bloop electronic tones |
+| **Retro** | 8-bit chiptune square and pulse waves |
+| **Nature** | Rain, fire, insects — procedural ambient textures |
+| **Sci-Fi** | Phasers, warp drives, laser bursts |
+| **Haptic** | Tactile vibration pulses and clicks |
+| **Radio** | AM/FM static, morse, transmission artefacts |
+| **Foley** | Footsteps, paper, keys, everyday impacts |
+| **Underwater** | Sonar pings, bubble trains, deep pressure tones |
+| **Weather** | Thunder, lightning crackle, rain layers |
+| **Bell** | Marimba, tubular bells, resonant metal |
+| **Bass** | Deep sub-bass pulses and 808-style hits |
+| **Glitch** | Buffer corruption, bit-crush, digital stutter |
+| **Pinball** | Flippers, bumpers, drain, mechanical clicks |
+| **Horror** | Dissonant drones, breath, reversed tails |
+| **Granular** | Scattered grain clouds across noise and pitch |
+| **Lo-Fi** | Vinyl crackle, tape wow/flutter, telephone bandwidth |
 
-Every run produces a different sequence. Output is normalized to −0.1 dBFS.
+---
+
+## Synthesis engine
+
+- **FM synthesis** — frequency modulation for metallic, bell, sci-fi timbres
+- **Additive harmonics** — stacked partials with individual envelopes
+- **Subtractive synthesis** — Butterworth bandpass/lowpass filtered noise
+- **Granular synthesis** — stochastic grain clouds scattered in time and pitch
+- **Physical modelling** — mass-spring-damper resonators for bells and impacts
+- **Karplus-Strong** — delay-line feedback for plucked string sounds
+- **PolyBLEP** — bandlimited square/pulse waves (no aliasing)
+- **TPDF dithering** — triangular noise before quantisation
+- **Lookahead limiter** — true-peak limiting with 5ms lookahead + release
+
+---
+
+## Parameter knobs
+
+Three real-time knobs shape every mode:
+
+| Knob | Effect |
+|---|---|
+| **⚡ Energy** | Low = sparse/slow, High = dense/rapid |
+| **☀ Brightness** | Low = dark/muffled, High = bright/sharp |
+| **🌀 Chaos** | Low = clean/ordered, High = saturated/glitchy |
+
+Moving a knob auto-generates a 3s preview after 600ms.
 
 ---
 
 ## Web interface
 
 ```bash
+pip install -r requirements-server.txt
 python server.py
 ```
 
-Open **http://localhost:5000** — set duration, pick quality, hit Generate.
+Open **http://localhost:5000**
 
-The UI shows a live waveform, plays audio in the browser, and lets you download the WAV.
-
-![Glorb UI](https://raw.githubusercontent.com/bassimatte/glorb/main/docs/screenshot.png)
+Features: 6 colour themes, live waveform, audio-reactive dot-grid background, loop playback, WAV download.
 
 ---
 
 ## CLI
 
 ```bash
-# Default: 10s, high quality → blipblop.wav
-python main.py
-
-# Set duration
-python main.py -d 30
-
-# Custom output file
-python main.py -d 60 -o my_glorb.wav
-
-# Set quality
-python main.py -q studio
-
-# Render and play immediately
-python main.py -d 10 --play
+python main.py              # 10s, high quality → blipblop.wav
+python main.py -d 30        # 30s output
+python main.py -q studio    # 48kHz / 24-bit
+python main.py --play       # render and play immediately
 ```
 
 ### Quality presets
 
-| Flag | Sample rate | Bit depth | Use case |
-|---|---|---|---|
-| `standard` | 44 100 Hz | 16-bit PCM | Small file size |
-| `high` *(default)* | 44 100 Hz | 24-bit PCM | CD+ quality |
-| `studio` | 48 000 Hz | 24-bit PCM | Pro audio / video |
-| `float` | 44 100 Hz | 32-bit float | Maximum precision |
+| Flag | Sample rate | Bit depth |
+|---|---|---|
+| `standard` | 44 100 Hz | 16-bit PCM |
+| `high` *(default)* | 44 100 Hz | 24-bit PCM |
+| `studio` | 48 000 Hz | 24-bit PCM |
+| `float` | 44 100 Hz | 32-bit float |
 
 ---
 
@@ -70,29 +97,15 @@ python main.py -d 10 --play
 ```bash
 git clone https://github.com/bassimatte/glorb.git
 cd glorb
-pip install numpy sounddevice soundfile scipy flask
+pip install numpy sounddevice soundfile scipy flask flask-cors
 ```
-
-### Requirements
-
-- Python 3.10+
-- `numpy`
-- `sounddevice`
-- `soundfile`
-- `scipy`
-- `flask` *(web interface only)*
 
 ---
 
-## Project structure
+## Deployment
 
-```
-glorb/
-├── main.py              # Synthesis engine + CLI
-├── server.py            # Flask web server
-└── templates/
-    └── index.html       # Minimal dark web UI
-```
+- **Frontend** (GitHub Pages): `docs/index.html` — served statically
+- **Backend** (Render.com): Flask + gunicorn via Docker — `render.yaml` included
 
 ---
 
