@@ -11,11 +11,13 @@ import os
 import numpy as np
 import soundfile as sf
 from flask import Flask, render_template, request, send_file
+from flask_cors import CORS
 
 sys.path.insert(0, os.path.dirname(__file__))
 import main as bb
 
 app = Flask(__name__)
+CORS(app)  # allow GitHub Pages to call Render backend
 
 
 _DITHER_BITS = {"PCM_16": 16, "PCM_24": 24, "PCM_32": 32}
@@ -34,7 +36,16 @@ def _apply_tpdf_dither(audio, subtype):
     return audio + (r1 + r2) * lsb   # triangular PDF, peak amplitude = 1 LSB
 
 
+def _normalize(audio):
+    """Peak-normalize to -0.1 dBFS (0.9886 linear)."""
+    peak = np.max(np.abs(audio))
+    if peak > 0:
+        audio = audio / peak * 0.9886
+    return audio.astype(np.float32)
+
+
 def _wav_bytes(audio, sample_rate, subtype):
+    audio = _normalize(audio)
     audio = _apply_tpdf_dither(audio, subtype)
     buf = io.BytesIO()
     sf.write(buf, audio, sample_rate, subtype=subtype, format="WAV")

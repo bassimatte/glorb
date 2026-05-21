@@ -43,6 +43,49 @@ def _knob(val, lo, hi):
     return lo + (hi - lo) * (val / 100.0)
 
 
+def _apply_knob_brightness(audio):
+    """Low-shelf cut (dark) or high-shelf boost (bright) based on KNOB_BRIGHTNESS."""
+    if abs(KNOB_BRIGHTNESS - 50) < 3:
+        return audio
+    from scipy.signal import butter, sosfilt
+    nyq = SAMPLE_RATE / 2
+    stereo = audio.ndim == 2
+    if KNOB_BRIGHTNESS < 50:
+        # Low-pass: brightness=0 → cutoff ~600 Hz, brightness=50 → near-flat
+        cutoff = max(200, _knob(KNOB_BRIGHTNESS, 600, nyq * 0.98))
+        sos = butter(2, cutoff / nyq, btype='low', output='sos')
+        if stereo:
+            return np.stack([sosfilt(sos, audio[:, 0]),
+                             sosfilt(sos, audio[:, 1])], axis=1).astype(np.float32)
+        return sosfilt(sos, audio).astype(np.float32)
+    else:
+        # High-shelf add: brightness=50 → 0 boost, brightness=100 → +55 % high content
+        boost = _knob(KNOB_BRIGHTNESS, 0.0, 0.55)
+        sos = butter(2, min(3000 / nyq, 0.99), btype='high', output='sos')
+        if stereo:
+            return np.stack([audio[:, 0] + boost * sosfilt(sos, audio[:, 0]),
+                             audio[:, 1] + boost * sosfilt(sos, audio[:, 1])], axis=1).astype(np.float32)
+        return (audio + boost * sosfilt(sos, audio)).astype(np.float32)
+
+
+def _apply_knob_chaos(audio):
+    """Tanh drive + pitch wobble based on KNOB_CHAOS."""
+    if KNOB_CHAOS < 5:
+        return audio
+    drive = _knob(KNOB_CHAOS, 1.0, 4.0)
+    audio = soft_saturate(audio, drive)
+    if KNOB_CHAOS > 55:
+        depth = _knob(KNOB_CHAOS, 0.0, 0.007)
+        rate  = _knob(KNOB_CHAOS, 0.2, 2.5)
+        if audio.ndim == 2:
+            L = pitch_wobble(audio[:, 0], rate_hz=rate, depth=depth)
+            R = pitch_wobble(audio[:, 1], rate_hz=rate, depth=depth)
+            audio = np.stack([L, R], axis=1)
+        else:
+            audio = pitch_wobble(audio, rate_hz=rate, depth=depth)
+    return audio.astype(np.float32)
+
+
 # ---------------------------------------------------------------------------
 # Waveform generators
 # ---------------------------------------------------------------------------
@@ -420,10 +463,11 @@ _RETRO_SOUNDS = [
 def make_retro_sequence(target_duration=10.0):
     names, fns, weights = zip(*_RETRO_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.04, 0.25)
+        gap = random.uniform(0.04 * gap_scale, 0.25 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -748,10 +792,11 @@ _SCIFI_SOUNDS = [
 def make_scifi_sequence(target_duration=10.0):
     names, fns, weights = zip(*_SCIFI_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.03, 0.3)
+        gap = random.uniform(0.03 * gap_scale, 0.3 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -835,10 +880,11 @@ _HAPTIC_SOUNDS = [
 def make_haptic_sequence(target_duration=10.0):
     names, fns, weights = zip(*_HAPTIC_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.01, 0.15)
+        gap = random.uniform(0.01 * gap_scale, 0.15 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -942,10 +988,11 @@ _RADIO_SOUNDS = [
 def make_radio_sequence(target_duration=10.0):
     names, fns, weights = zip(*_RADIO_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.02, 0.25)
+        gap = random.uniform(0.02 * gap_scale, 0.25 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -985,13 +1032,15 @@ def lookahead_limiter(audio, threshold=0.98, lookahead_ms=5.0, release_ms=50.0):
 
 
 def _finalise(audio, target_duration):
-    """Trim/pad to exact duration, apply lookahead limiting, then peak-normalise."""
+    """Trim/pad, apply knob post-processing, lookahead limiting, peak-normalise."""
     target_samples = int(target_duration * SAMPLE_RATE)
     audio = audio[:target_samples]
     if len(audio) < target_samples:
         pad = target_samples - len(audio)
         audio = np.pad(audio, ((0, pad), (0, 0)))
-    audio = lookahead_limiter(audio)          # catch transient peaks
+    audio = _apply_knob_brightness(audio)
+    audio = _apply_knob_chaos(audio)
+    audio = lookahead_limiter(audio)
     peak = np.max(np.abs(audio))
     if peak > 0:
         audio = audio / peak * 0.9886
@@ -1081,10 +1130,11 @@ _FOLEY_SOUNDS = [
 def make_foley_sequence(target_duration=10.0):
     names, fns, weights = zip(*_FOLEY_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.08, 0.4)
+        gap = random.uniform(0.08 * gap_scale, 0.4 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -1180,10 +1230,11 @@ _UNDERWATER_SOUNDS = [
 def make_underwater_sequence(target_duration=10.0):
     names, fns, weights = zip(*_UNDERWATER_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.05, 0.5)
+        gap = random.uniform(0.05 * gap_scale, 0.5 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -1270,10 +1321,11 @@ _WEATHER_SOUNDS = [
 def make_weather_sequence(target_duration=10.0):
     names, fns, weights = zip(*_WEATHER_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.02, 0.3)
+        gap = random.uniform(0.02 * gap_scale, 0.3 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -1362,10 +1414,11 @@ _BELL_SOUNDS = [
 def make_bell_sequence(target_duration=10.0):
     names, fns, weights = zip(*_BELL_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.15, 0.8)
+        gap = random.uniform(0.15 * gap_scale, 0.8 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -1443,10 +1496,11 @@ _BASS_SOUNDS = [
 def make_bass_sequence(target_duration=10.0):
     names, fns, weights = zip(*_BASS_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.05, 0.3)
+        gap = random.uniform(0.05 * gap_scale, 0.3 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -1539,10 +1593,11 @@ _GLITCH_SOUNDS = [
 def make_glitch_sequence(target_duration=10.0):
     names, fns, weights = zip(*_GLITCH_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.01, 0.15)
+        gap = random.uniform(0.01 * gap_scale, 0.15 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -1624,10 +1679,11 @@ _PINBALL_SOUNDS = [
 def make_pinball_sequence(target_duration=10.0):
     names, fns, weights = zip(*_PINBALL_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.03, 0.2)
+        gap = random.uniform(0.03 * gap_scale, 0.2 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -1716,10 +1772,11 @@ _HORROR_SOUNDS = [
 def make_horror_sequence(target_duration=10.0):
     names, fns, weights = zip(*_HORROR_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.1, 1.5)
+        gap = random.uniform(0.1 * gap_scale, 1.5 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
@@ -1816,6 +1873,7 @@ def make_granular_sequence(target_duration=10.0):
     total_samples = int(target_duration * SAMPLE_RATE)
     audio = np.zeros((total_samples, 2), dtype=np.float32)
     pos = 0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while pos < total_samples:
         idx = random.choices(range(len(names)), weights=weights)[0]
         if names[idx] in {"grain_cloud", "grain_sparse", "grain_pitched"}:
@@ -1825,7 +1883,7 @@ def make_granular_sequence(target_duration=10.0):
         start = min(pos + int(random.uniform(0.0, 0.03) * SAMPLE_RATE), total_samples - 1)
         end = min(start + len(sig), total_samples)
         audio[start:end] += sig[:end - start]
-        pos = end + int(random.uniform(0.002, 0.06) * SAMPLE_RATE)
+        pos = end + int(random.uniform(0.002 * gap_scale, 0.06 * gap_scale) * SAMPLE_RATE)
     return _finalise(audio, target_duration)
 
 
@@ -1903,10 +1961,11 @@ _LOFI_SOUNDS = [
 def make_lofi_sequence(target_duration=10.0):
     names, fns, weights = zip(*_LOFI_SOUNDS)
     parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.5, 0.25)
     while total < target_duration:
         idx = random.choices(range(len(names)), weights=weights)[0]
         sig = fns[idx]()
-        gap = random.uniform(0.02, 0.2)
+        gap = random.uniform(0.02 * gap_scale, 0.2 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap

@@ -703,6 +703,7 @@
 </div>
 
 <script>
+  const GLORB_API_BASE = 'https://glorb.onrender.com';
   /* ══════════════════════════════════════════════════════════════════
      SHARED STATE
   ══════════════════════════════════════════════════════════════════ */
@@ -789,7 +790,7 @@
                      energy: knobEnergy, brightness: knobBright, chaos: knobChaos };
       if (selectedMode === 'nature' && selectedVariant !== 'random') body.variant = selectedVariant;
       onProgress?.('generating…');
-      const res = await fetch('/generate', {
+      const res = await fetch(GLORB_API_BASE + '/generate', {
         method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`server error ${res.status}`);
@@ -810,7 +811,7 @@
 
   async function coreDownload(wavBlob) {
     if (selectedMode === 'ui-pack') {
-      const res  = await fetch(`/ui-pack-zip?quality=${selectedQ}`);
+      const res  = await fetch(GLORB_API_BASE + `/ui-pack-zip?quality=${selectedQ}`);
       const blob = await res.blob();
       triggerDownload(URL.createObjectURL(blob), `glorb_ui_pack_${Date.now()}.zip`);
       return;
@@ -1154,7 +1155,7 @@
     if (selectedMode === 'ui-pack') {
       setStatus('building zip…', 'active'); btnDl.disabled = true;
       try {
-        const res = await fetch(`/ui-pack-zip?quality=${selectedQ}`);
+        const res = await fetch(GLORB_API_BASE + `/ui-pack-zip?quality=${selectedQ}`);
         triggerDownload(URL.createObjectURL(await res.blob()), `glorb_ui_pack_${Date.now()}.zip`);
         setStatus('zip downloaded — 7 individual wavs');
       } catch(e) { setStatus(e.message, 'error'); }
