@@ -312,15 +312,6 @@
     #status.active { color: var(--accent); }
     #status.error  { color: var(--danger); }
 
-    /* ═══════════════════════════════════════════════════════════════
-       UI SWITCHING
-    ═══════════════════════════════════════════════════════════════ */
-    .ui-view { display: none; min-height: 100vh; width: 100%; }
-    .ui-view.active { display: flex; align-items: center; justify-content: center; background: var(--bg); }
-
-    #ui-glorb.active { align-items: stretch; justify-content: flex-start; flex-direction: column; }
-    #ui-glorb .shell { width: 100%; }
-
     /* ── Floating gear ───────────────────────────────────────────── */
     #float-gear {
       position: fixed; bottom: 24px; right: 24px; z-index: 100;
@@ -359,205 +350,21 @@
       min-width: 40px; text-align: center; letter-spacing: 0.06em;
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       TAPE DECK UI
-    ═══════════════════════════════════════════════════════════════ */
-    #ui-tape {
-      background: var(--bg); align-items: center; justify-content: center;
-      flex-direction: column; gap: 0; padding: 40px 20px;
+    /* ── Generate progress bar ───────────────────────────────────── */
+    #gen-progress-wrap {
+      width: 100%; height: 3px; background: var(--border);
+      border-radius: 2px; overflow: hidden; display: none; margin-top: -8px;
     }
-    .deck-body {
-      width: min(600px, 97vw);
-      background: var(--surface);
-      border-radius: 14px 14px 10px 10px;
-      border: 1px solid var(--border);
-      box-shadow: 0 16px 48px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
-      overflow: hidden;
-    }
-    .deck-top { display: flex; gap: 16px; padding: 24px 24px 18px; }
-    .cassette {
-      flex: 1;
-      background: var(--bg); border-radius: 8px; border: 1px solid var(--border);
-      padding: 16px 18px;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,.4);
-    }
-    .cass-header {
-      display: flex; justify-content: space-between; align-items: baseline;
-      margin-bottom: 14px;
-    }
-    .cass-brand { font-size: 18px; font-weight: 900; letter-spacing: 0.06em; color: var(--accent); text-shadow: 0 0 10px var(--glow); }
-    .cass-sub   { font-size: 9px; letter-spacing: 0.22em; color: var(--muted); text-transform: uppercase; }
-    .cass-reels { display: flex; gap: 28px; justify-content: center; align-items: center; margin-bottom: 12px; }
-    .reel {
-      width: 84px; height: 84px; border-radius: 50%;
-      background: radial-gradient(circle at 38% 36%, var(--surface), var(--bg));
-      border: 2px solid var(--border); position: relative;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .reel-spokes {
-      position: absolute; inset: 0; border-radius: 50%;
-      background: repeating-conic-gradient(rgba(255,255,255,.04) 0deg 10deg, transparent 10deg 60deg);
-    }
-    .reel-hub { width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle at 40% 38%, var(--muted), var(--bg)); border: 1px solid var(--muted); z-index: 1; }
-    .cass-tape-line {
-      width: 100%; height: 4px;
-      background: linear-gradient(90deg, var(--bg), var(--border) 20%, var(--border) 80%, var(--bg));
+    #gen-progress-bar {
+      height: 100%; width: 0%; background: var(--accent);
       border-radius: 2px;
+      box-shadow: 0 0 8px var(--glow);
+      transition: width .12s linear;
     }
-    .vu-col {
-      display: flex; flex-direction: column-reverse; gap: 3px; justify-content: flex-start;
-      background: var(--bg); border-radius: 4px; border: 1px solid var(--border);
-      padding: 8px 6px; width: 26px;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,.4);
-    }
-    .vu-seg {
-      width: 14px; height: 6px; border-radius: 1px; background: var(--border); transition: background .04s;
-    }
-    .vu-seg.g { background: #00bb44; box-shadow: 0 0 4px #00bb44; }
-    .vu-seg.y { background: #ccaa00; box-shadow: 0 0 4px #ccaa00; }
-    .vu-seg.r { background: #ff3322; box-shadow: 0 0 5px #ff3322; }
-    .deck-mid { padding: 0 24px 16px; display: flex; flex-direction: column; gap: 12px; }
-    .tape-modes { display: flex; gap: 5px; flex-wrap: wrap; }
-    .tmb {
-      flex: 1; padding: 7px 2px; font-size: 9px; letter-spacing: 0.1em;
-      text-transform: uppercase; font-family: var(--font);
-      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
-      border-radius: 4px; cursor: pointer; transition: all .1s;
-    }
-    .tmb:hover { color: var(--accent); border-color: var(--accent); }
-    .tmb.active { color: var(--accent); border-color: var(--accent); background: var(--surface); box-shadow: 0 0 8px var(--glow); }
-    .tape-dur-row { display: flex; align-items: center; gap: 8px; }
-    .tdlabel { font-size: 9px; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; font-family: var(--font); min-width: 48px; }
-    .td-btn {
-      width: 28px; height: 28px; border-radius: 4px;
-      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
-      font-family: var(--font); font-size: 16px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; transition: all .1s;
-    }
-    .td-btn:hover { color: var(--accent); border-color: var(--accent); }
-    .td-val {
-      flex: 1; text-align: center;
-      font-size: 22px; font-weight: 700; color: var(--accent);
-      font-family: var(--font); letter-spacing: 0.1em;
-      text-shadow: 0 0 10px var(--glow);
-    }
-    .deck-transport {
-      background: var(--bg); border-top: 1px solid var(--border);
-      padding: 18px 24px; display: flex; gap: 10px; align-items: center;
-    }
-    .tbtn {
-      padding: 11px 16px; font-family: var(--font); font-size: 13px; font-weight: 600;
-      background: var(--surface);
-      border: 1px solid var(--border); color: var(--muted); border-radius: 5px;
-      cursor: pointer; letter-spacing: 0.08em;
-      box-shadow: 0 3px 6px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.04);
-      transition: all .08s;
-    }
-    .tbtn:hover { color: var(--text); border-color: var(--muted); }
-    .tbtn:active { transform: translateY(1px); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
-    .tbtn.rec { color: #cc3311; border-color: #4a1a0a; }
-    .tbtn.rec:hover { color: #ff5533; border-color: #cc3311; box-shadow: 0 3px 6px rgba(0,0,0,.3), 0 0 10px rgba(204,51,17,.2); }
-    .tbtn.rec.rolling { color: #ff2200; border-color: #ff4422; animation: recP .7s ease-in-out infinite; }
-    @keyframes recP { 0%,100%{box-shadow:0 3px 6px rgba(0,0,0,.3),0 0 8px rgba(255,34,0,.2)} 50%{box-shadow:0 3px 6px rgba(0,0,0,.3),0 0 18px rgba(255,34,0,.45)} }
-    .tbtn.go  { color: var(--accent); border-color: var(--accent); }
-    .tbtn.go:hover  { box-shadow: 0 3px 6px rgba(0,0,0,.3), 0 0 10px var(--glow); }
-    .tbtn.go.playing { color: #ff4422; border-color: #cc2211; }
-    #tape-status {
-      font-size: 10px; letter-spacing: 0.22em; color: var(--muted); text-align: center;
-      text-transform: uppercase; padding: 10px; font-family: var(--font); transition: color .2s;
-    }
-    #tape-status.active { color: var(--accent); }
-    #tape-status.playing { color: #00cc44; }
-    #tape-status.error   { color: #ff4422; }
-
-
-    /* ═══════════════════════════════════════════════════════════════
-       SYNTH PANEL UI
-    ═══════════════════════════════════════════════════════════════ */
-    #ui-synth {
-      background: var(--bg); align-items: center; justify-content: center;
-    }
-    .synth-rack { width: min(800px, 96vw); }
-    .synth-panel {
-      background: var(--surface);
-      border: 2px solid var(--border);
-      border-radius: 4px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
-    }
-    .sp-header {
-      background: var(--bg); padding: 7px 16px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-    }
-    .sp-title { font-size: 9px; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; font-family: var(--font); }
-    .sp-serial{ font-size: 8px; color: var(--border); letter-spacing: 0.1em; font-family: var(--font); }
-    .sp-modules { display: flex; padding: 20px 12px; gap: 0; align-items: stretch; }
-    .smod {
-      flex: 1; padding: 0 16px;
-      border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 10px;
-    }
-    .smod:last-child { border-right: none; }
-    .smod-label {
-      font-size: 9px; letter-spacing: 0.28em; color: var(--muted); text-transform: uppercase;
-      font-family: var(--font); align-self: flex-start; border-bottom: 1px solid var(--border);
-      width: 100%; padding-bottom: 5px;
-    }
-    /* Knob */
-    .knob-wrap { cursor: ns-resize; user-select: none; position: relative; }
-    .knob-wrap:hover svg { filter: drop-shadow(0 0 5px rgba(255,200,0,.35)); }
-    .knob-lbl { font-size: 8px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; font-family: var(--font); text-align: center; }
-    .knob-val { font-size: 13px; font-weight: 700; color: var(--text); font-family: var(--font); text-align: center; letter-spacing: 0.06em; }
-    /* Mode rotary */
-    .mode-rot { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .mode-rot-lbl { font-size: 8px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; font-family: var(--font); }
-    .mode-rot-val { font-size: 13px; font-weight: 700; color: var(--accent); font-family: var(--font); letter-spacing: 0.1em; text-shadow: 0 0 8px var(--glow); }
-    .mode-rot-hint { font-size: 8px; color: var(--border); font-family: var(--font); }
-    /* Scope */
-    #synth-scope {
-      width: 100%; height: 90px; border: 1px solid var(--border); border-radius: 2px; display: block;
-      background: var(--bg);
-      background-image: repeating-linear-gradient(0deg,transparent,transparent 8px,rgba(128,255,128,.03) 8px,rgba(128,255,128,.03) 9px),
-                        repeating-linear-gradient(90deg,transparent,transparent 8px,rgba(128,255,128,.03) 8px,rgba(128,255,128,.03) 9px);
-    }
-    /* Big generate button */
-    .synth-gen {
-      width: 60px; height: 60px; border-radius: 50%;
-      background: var(--surface);
-      border: 3px solid var(--border); color: var(--accent);
-      font-family: var(--font); font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
-      cursor: pointer; transition: all .1s;
-      box-shadow: 0 6px 16px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
-    }
-    .synth-gen:hover { border-color: var(--accent); box-shadow: 0 6px 16px rgba(0,0,0,.4), 0 0 18px var(--glow); }
-    .synth-gen:active { transform: scale(.94); }
-    .synth-gen.loading { border-color: #ff8800; color: #ff8800; box-shadow: 0 6px 16px rgba(0,0,0,.4), 0 0 14px rgba(255,136,0,.35); }
-    .synth-sm-btns { display: flex; flex-direction: column; gap: 6px; }
-    .synth-sm {
-      padding: 6px 10px; background: var(--bg); border: 1px solid var(--border); color: var(--muted);
-      font-family: var(--font); font-size: 10px; border-radius: 3px; cursor: pointer; transition: all .12s;
-    }
-    .synth-sm:hover { border-color: var(--accent); color: var(--accent); }
-    .synth-sm.playing { border-color: #ff4422; color: #ff4422; }
-    .synth-leds { display: flex; gap: 3px; }
-    .sled { width: 5px; height: 5px; border-radius: 50%; background: var(--border); border: 1px solid var(--border); transition: all .06s; }
-    .sled.y.on  { background: #ffcc00; box-shadow: 0 0 5px #ffcc00; border-color: #ffcc00; }
-    .sled.g.on  { background: #00cc44; box-shadow: 0 0 5px #00cc44; border-color: #00cc44; }
-    .sp-status {
-      background: var(--bg); border-top: 1px solid var(--border);
-      padding: 6px 16px; font-size: 9px; letter-spacing: 0.18em;
-      color: var(--muted); text-transform: uppercase; font-family: var(--font);
-    }
-    .sp-patchbay {
-      background: var(--bg); border-top: 1px solid var(--border); padding: 9px 16px;
-      display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
-    }
-    .pp { width: 13px; height: 13px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); box-shadow: inset 0 1px 2px rgba(0,0,0,.4); }
-    .plbl { font-size: 7px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; font-family: var(--font); margin: 0 2px; }
   </style>
 </head>
 <body>
-<!-- ═══════════ UI 0: GLORB (default) ═══════════ -->
-<div id="ui-glorb" class="ui-view active">
+<!-- ═══════════ GLORB ═══════════ -->
 <div class="shell">
 
   <header>
@@ -623,173 +430,17 @@
       <button id="btn-download">↓ Save</button>
     </div>
 
+    <div id="gen-progress-wrap"><div id="gen-progress-bar"></div></div>
+
   </div>
 
   <div id="status">—</div>
 
 </div><!-- .shell -->
-</div><!-- #ui-glorb -->
-
-<!-- ═══════════ UI 1: TAPE DECK ═══════════ -->
-<div id="ui-tape" class="ui-view">
-  <div class="deck-body">
-    <div class="deck-top">
-      <div class="cassette">
-        <div class="cass-header">
-          <span class="cass-brand">GLORB</span>
-          <span class="cass-sub">Type II · 60</span>
-        </div>
-        <div class="cass-reels">
-          <div class="reel" id="reel-l"><div class="reel-spokes"></div><div class="reel-hub"></div></div>
-          <div class="cass-tape-line" style="width:32px;height:4px;align-self:center;"></div>
-          <div class="reel" id="reel-r"><div class="reel-spokes"></div><div class="reel-hub"></div></div>
-        </div>
-        <div class="cass-tape-line"></div>
-      </div>
-      <div class="vu-col" id="vu-col">
-        <div class="vu-seg"></div><div class="vu-seg"></div><div class="vu-seg"></div>
-        <div class="vu-seg"></div><div class="vu-seg"></div><div class="vu-seg"></div>
-        <div class="vu-seg"></div><div class="vu-seg"></div><div class="vu-seg"></div>
-        <div class="vu-seg"></div><div class="vu-seg"></div><div class="vu-seg"></div>
-        <div class="vu-seg"></div><div class="vu-seg"></div><div class="vu-seg"></div>
-        <div class="vu-seg"></div>
-      </div>
-    </div>
-    <div class="deck-mid">
-      <div class="tape-modes" id="tape-mode-btns">
-        <button class="tmb active" data-mode="glorb">GLB</button>
-        <button class="tmb" data-mode="retro">RET</button>
-        <button class="tmb" data-mode="nature">NAT</button>
-        <button class="tmb" data-mode="scifi">SFX</button>
-        <button class="tmb" data-mode="haptic">HAP</button>
-        <button class="tmb" data-mode="radio">RAD</button>
-        <button class="tmb" data-mode="ui-pack">UIP</button>
-        <button class="tmb" data-mode="foley">FOL</button>
-        <button class="tmb" data-mode="underwater">UNW</button>
-        <button class="tmb" data-mode="weather">WTH</button>
-        <button class="tmb" data-mode="bell">BEL</button>
-        <button class="tmb" data-mode="bass">BAS</button>
-        <button class="tmb" data-mode="glitch">GLT</button>
-        <button class="tmb" data-mode="pinball">PIN</button>
-        <button class="tmb" data-mode="horror">HOR</button>
-        <button class="tmb" data-mode="granular">GRN</button>
-        <button class="tmb" data-mode="lofi">LFI</button>
-      </div>
-      <div class="tape-dur-row">
-        <span class="tdlabel">Duration</span>
-        <button class="td-btn" id="tape-dur-dn">−</button>
-        <span class="td-val" id="tape-dur-val">10s</span>
-        <button class="td-btn" id="tape-dur-up">+</button>
-      </div>
-    </div>
-    <div class="deck-transport">
-      <button class="tbtn rec" id="tape-gen">● REC</button>
-      <button class="tbtn go" id="tape-play" style="display:none">▶ PLAY</button>
-      <button class="tbtn" id="tape-dl" style="display:none">↓ SAVE</button>
-    </div>
-    <div id="tape-status">READY</div>
-  </div>
-</div>
-
-<!-- ═══════════ UI 3: SYNTH PANEL ═══════════ -->
-<div id="ui-synth" class="ui-view">
-  <div class="synth-rack">
-    <div class="synth-panel">
-      <div class="sp-header">
-        <span class="sp-title">Glorb Modular · Sound Synthesis Engine</span>
-        <span class="sp-serial">SN-2026-001</span>
-      </div>
-      <div class="sp-modules">
-
-        <!-- MODULE: MODE -->
-        <div class="smod">
-          <div class="smod-label">OSC / Mode</div>
-          <div class="mode-rot" id="synth-mode-rot" title="Click to cycle mode">
-            <svg width="64" height="64" viewBox="0 0 64 64">
-              <circle cx="32" cy="32" r="28" fill="url(#kg)" stroke="#3a3a3a" stroke-width="2"/>
-              <defs><radialGradient id="kg" cx="40%" cy="38%"><stop offset="0%" stop-color="#383838"/><stop offset="100%" stop-color="#181818"/></radialGradient></defs>
-              <circle cx="32" cy="32" r="4" fill="#ffcc00" opacity=".8"/>
-              <line id="synth-mode-line" x1="32" y1="32" x2="32" y2="8" stroke="#ffcc00" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-            <div class="mode-rot-lbl">Mode</div>
-            <div class="mode-rot-val" id="synth-mode-val">GLORB</div>
-            <div class="mode-rot-hint">click to cycle</div>
-          </div>
-          <div class="synth-leds" id="synth-mode-leds">
-            <div class="sled y on"></div><div class="sled y"></div><div class="sled y"></div>
-            <div class="sled y"></div><div class="sled y"></div><div class="sled y"></div><div class="sled y"></div>
-            <div class="sled y"></div><div class="sled y"></div><div class="sled y"></div>
-            <div class="sled y"></div><div class="sled y"></div><div class="sled y"></div>
-            <div class="sled y"></div><div class="sled y"></div><div class="sled y"></div><div class="sled y"></div>
-          </div>
-        </div>
-
-        <!-- MODULE: DURATION -->
-        <div class="smod">
-          <div class="smod-label">ENV / Duration</div>
-          <div class="knob-wrap" id="synth-dur-knob" title="Drag up/down">
-            <svg width="64" height="64" viewBox="0 0 64 64">
-              <circle cx="32" cy="32" r="28" fill="url(#kg2)" stroke="#3a3a3a" stroke-width="2"/>
-              <defs><radialGradient id="kg2" cx="40%" cy="38%"><stop offset="0%" stop-color="#383838"/><stop offset="100%" stop-color="#181818"/></radialGradient></defs>
-              <circle cx="32" cy="32" r="4" fill="#aaa" opacity=".6"/>
-              <line id="synth-dur-line" x1="32" y1="32" x2="32" y2="8" stroke="#aaaaaa" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div class="knob-lbl">Duration</div>
-          <div class="knob-val" id="synth-dur-val">10s</div>
-        </div>
-
-        <!-- MODULE: SCOPE -->
-        <div class="smod" style="flex:1.4">
-          <div class="smod-label">Scope / Output</div>
-          <canvas id="synth-scope"></canvas>
-          <div class="synth-leds">
-            <div class="sled g" id="sl0"></div><div class="sled g" id="sl1"></div>
-            <div class="sled g" id="sl2"></div><div class="sled g" id="sl3"></div>
-            <div class="sled g" id="sl4"></div>
-          </div>
-        </div>
-
-        <!-- MODULE: OUT -->
-        <div class="smod">
-          <div class="smod-label">Out</div>
-          <button class="synth-gen" id="synth-gen">GEN</button>
-          <div class="synth-sm-btns">
-            <button class="synth-sm" id="synth-play" style="display:none">▶ play</button>
-            <button class="synth-sm" id="synth-dl"   style="display:none">↓ save</button>
-          </div>
-          <div class="synth-leds">
-            <div class="sled y" id="synth-led-ready"></div>
-            <div class="sled g" id="synth-led-play"></div>
-          </div>
-        </div>
-
-      </div><!-- .sp-modules -->
-      <div class="sp-patchbay">
-        <div class="pp"></div><span class="plbl">in</span>
-        <div class="pp"></div><div class="pp"></div><span class="plbl">osc</span>
-        <div class="pp"></div><div class="pp"></div><span class="plbl">env</span>
-        <div class="pp"></div><div class="pp"></div><span class="plbl">vca</span>
-        <div class="pp"></div><div class="pp"></div><span class="plbl">fx</span>
-        <div class="pp"></div><div class="pp"></div><span class="plbl">out l</span>
-        <div class="pp"></div><div class="pp"></div><span class="plbl">out r</span>
-      </div>
-      <div class="sp-status" id="synth-status">idle — ready to synthesize</div>
-    </div>
-  </div>
-</div>
 
 <!-- ═══════════ FLOATING SETTINGS ═══════════ -->
 <button id="float-gear">⚙</button>
 <div id="float-drawer">
-  <div class="dr">
-    <span class="dr-label">Interface</span>
-    <div class="pills" id="ui-switcher">
-      <button class="pill active" data-ui="glorb">Glorb</button>
-      <button class="pill" data-ui="tape">Tape</button>
-      <button class="pill" data-ui="synth">Synth</button>
-    </div>
-  </div>
   <div class="dr">
     <span class="dr-label">Appearance</span>
     <div class="pills">
@@ -836,7 +487,6 @@
   let animId      = null;
   let vizAnimId   = null;
   let vizActive   = false;
-  let currentUI   = 'glorb';
 
   const root        = document.documentElement;
   const vizOverlay  = document.getElementById('viz-overlay');
@@ -846,26 +496,6 @@
 
   /* ── CSS helper ─────────────────────────────────────────────────── */
   function getCSSVar(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
-
-  /* ══════════════════════════════════════════════════════════════════
-     UI SWITCHER
-  ══════════════════════════════════════════════════════════════════ */
-  const uiSwitcherPills = document.querySelectorAll('#ui-switcher .pill');
-  uiSwitcherPills.forEach(p => {
-    p.addEventListener('click', () => {
-      uiSwitcherPills.forEach(x => x.classList.remove('active'));
-      p.classList.add('active');
-      switchUI(p.dataset.ui);
-    });
-  });
-
-  function switchUI(name) {
-    currentUI = name;
-    document.querySelectorAll('.ui-view').forEach(v => v.classList.remove('active'));
-    document.getElementById('ui-' + name).classList.add('active');
-    localStorage.setItem('glorb-ui', name);
-    if (name === 'synth') setTimeout(() => { drawSynthScope(); }, 50);
-  }
 
   /* ── Floating gear ──────────────────────────────────────────────── */
   const floatGear   = document.getElementById('float-gear');
@@ -891,8 +521,7 @@
     if (light) root.setAttribute('data-light', '');
     else       root.removeAttribute('data-light');
     localStorage.setItem('glorb-light', light ? '1' : '');
-    if (!audioBuffer) { drawIdle(); drawSynthScope(); }
-    else { drawWaveform(audioBuffer, 1); drawSynthScope(); }
+    if (!audioBuffer) drawIdle(); else drawWaveform(audioBuffer, 1);
   }
   btnDark.addEventListener('click',  () => { btnDark.classList.add('active');  btnLight.classList.remove('active'); applyLight(false); });
   btnLight.addEventListener('click', () => { btnLight.classList.add('active'); btnDark.classList.remove('active');  applyLight(true);  });
@@ -960,8 +589,8 @@
     analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.8;
     sourceNode = audioCtx.createBufferSource();
     sourceNode.buffer = audioBuffer;
+    sourceNode.loop = true;
     sourceNode.connect(analyser); analyser.connect(audioCtx.destination);
-    sourceNode.onended = () => { stopPlayback(); if (vizActive) closeViz(); };
     const startedAt = audioCtx.currentTime;
     sourceNode.start(); isPlaying = true;
     return startedAt;
@@ -973,36 +602,23 @@
     if (vizAnimId)  { cancelAnimationFrame(vizAnimId); vizAnimId = null; }
     isPlaying = false;
     updateAllPlayButtons();
-    if (audioBuffer) { drawWaveform(audioBuffer, 1); drawSynthScope(); }
-    stopVUMeter(); stopSynthLEDs();
+    if (audioBuffer) drawWaveform(audioBuffer, 1);
   }
 
   function updateAllPlayButtons() {
-    // Glorb play button
     if (btnPlay) {
       btnPlay.textContent = isPlaying ? '■ Stop' : '▶ Play';
       btnPlay.classList.toggle('playing', isPlaying);
     }
-    const tbtnPlay = document.getElementById('tape-play');
-    if (tbtnPlay) {
-      tbtnPlay.textContent = isPlaying ? '■ STOP' : '▶ PLAY';
-      tbtnPlay.classList.toggle('playing', isPlaying);
-    }
-    const sp = document.getElementById('synth-play');
-    if (sp) sp.classList.toggle('playing', isPlaying);
-    if (isPlaying) startVUMeter(); else stopVUMeter();
-    if (isPlaying) animateSynthLEDs(); else stopSynthLEDs();
   }
 
-  function startProgressLoop(startedAt, progressCb) {
+  function startProgressLoop(startedAt) {
     function tick() {
       if (!isPlaying || !audioBuffer) return;
       const elapsed  = audioCtx.currentTime - startedAt;
-      const progress = Math.min(elapsed / audioBuffer.duration, 1);
+      const progress = (elapsed % audioBuffer.duration) / audioBuffer.duration;
       if (!vizActive) drawWaveform(audioBuffer, progress);
-      progressCb?.(progress);
-      if (progress < 1) animId = requestAnimationFrame(tick);
-      else stopPlayback();
+      animId = requestAnimationFrame(tick);
     }
     animId = requestAnimationFrame(tick);
   }
@@ -1037,7 +653,6 @@
       natureRow.style.display = selectedMode === 'nature' ? 'flex' : 'none';
       document.querySelector('.slider-wrap').parentElement.style.display = selectedMode === 'ui-pack' ? 'none' : 'flex';
       btnDl.textContent = selectedMode === 'ui-pack' ? '↓ ZIP' : '↓ Save';
-      syncAllModeDisplays();
     });
   });
   natPills.forEach(p => {
@@ -1087,11 +702,45 @@
   }
   drawIdle();
 
+  /* ── Generate progress bar ─────────────────────────────────────── */
+  const genProgressWrap = document.getElementById('gen-progress-wrap');
+  const genProgressBar  = document.getElementById('gen-progress-bar');
+  let genProgressTimer  = null;
+
+  function startGenProgress() {
+    genProgressWrap.style.display = 'block';
+    genProgressBar.style.width = '0%';
+    let pct = 0;
+    genProgressTimer = setInterval(() => {
+      // Ramp fast to 60%, then slow toward 90% — never reaches 100 until done
+      const step = pct < 60 ? 2.5 : pct < 80 ? 0.8 : 0.15;
+      pct = Math.min(90, pct + step);
+      genProgressBar.style.width = pct + '%';
+    }, 80);
+  }
+
+  function finishGenProgress() {
+    clearInterval(genProgressTimer);
+    genProgressBar.style.transition = 'width .2s ease';
+    genProgressBar.style.width = '100%';
+    setTimeout(() => {
+      genProgressBar.style.transition = 'opacity .4s';
+      genProgressBar.style.opacity = '0';
+      setTimeout(() => {
+        genProgressWrap.style.display = 'none';
+        genProgressBar.style.opacity  = '1';
+        genProgressBar.style.transition = 'width .12s linear';
+        genProgressBar.style.width = '0%';
+      }, 400);
+    }, 250);
+  }
+
   let glorb_wavBlob = null;
   btnGen.addEventListener('click', async () => {
     stopPlayback(); btnGen.disabled = true;
     btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'none';
     setStatus('generating…', 'active'); drawIdle();
+    startGenProgress();
     await coreGenerate(+sliderDur.value,
       () => {},
       (buf, blob) => {
@@ -1100,10 +749,15 @@
         btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'inline-block';
         setStatus(selectedMode === 'ui-pack'
           ? `preview — ${buf.duration.toFixed(1)}s · 7 sounds · save = zip`
-          : `ready — ${buf.duration.toFixed(1)}s · ${buf.sampleRate/1000}kHz · stereo`);
+          : `ready — ${buf.duration.toFixed(1)}s · ${buf.sampleRate/1000}kHz · stereo · looping`);
+        // Auto-play
+        const startedAt = startAudio();
+        btnPlay.textContent = '■ Stop'; btnPlay.classList.add('playing');
+        startProgressLoop(startedAt);
       },
       msg => setStatus(msg, 'error')
     );
+    finishGenProgress();
     btnGen.disabled = false;
   });
 
@@ -1112,7 +766,7 @@
     if (isPlaying) { stopPlayback(); return; }
     const startedAt = startAudio();
     btnPlay.textContent = '■ Stop'; btnPlay.classList.add('playing');
-    startProgressLoop(startedAt, p => drawWaveform(audioBuffer, p));
+    startProgressLoop(startedAt);
   });
 
   btnDl.addEventListener('click', async () => {
@@ -1127,259 +781,6 @@
     }
     if (glorb_wavBlob) triggerDownload(URL.createObjectURL(glorb_wavBlob), `glorb_${selectedMode}_${Date.now()}.wav`);
   });
-
-  /* ══════════════════════════════════════════════════════════════════
-     UI 1 — TAPE DECK
-  ══════════════════════════════════════════════════════════════════ */
-  const tapeGen    = document.getElementById('tape-gen');
-  const tapePlay   = document.getElementById('tape-play');
-  const tapeDl     = document.getElementById('tape-dl');
-  const tapeDurVal = document.getElementById('tape-dur-val');
-  const tapeStat   = document.getElementById('tape-status');
-  const reelL      = document.getElementById('reel-l');
-  const reelR      = document.getElementById('reel-r');
-  let tapeDur      = 10;
-  let tapeAngle    = 0;
-  let tapeAnimId   = null;
-  let tape_wavBlob = null;
-
-  document.getElementById('tape-dur-dn').addEventListener('click', () => { tapeDur = Math.max(1, tapeDur-5); tapeDurVal.textContent = tapeDur+'s'; });
-  document.getElementById('tape-dur-up').addEventListener('click', () => { tapeDur = Math.min(120, tapeDur+5); tapeDurVal.textContent = tapeDur+'s'; });
-
-  document.querySelectorAll('#tape-mode-btns .tmb').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('#tape-mode-btns .tmb').forEach(x => x.classList.remove('active'));
-      b.classList.add('active'); selectedMode = b.dataset.mode;
-      syncAllModeDisplays();
-    });
-  });
-
-  tapeGen.addEventListener('click', async () => {
-    if (isPlaying) stopPlayback();
-    tapeGen.classList.add('rolling'); tapeGen.disabled = true;
-    tapeStat.textContent = 'RECORDING'; tapeStat.className = 'active';
-    startReelSpin();
-    await coreGenerate(tapeDur, null,
-      (buf, blob) => {
-        tape_wavBlob = blob;
-        tapePlay.style.display = tapeDl.style.display = 'inline-block';
-        tapeStat.textContent = `DONE · ${buf.duration.toFixed(1)}s`;
-        tapeStat.className = '';
-      },
-      msg => { tapeStat.textContent = 'ERROR'; tapeStat.className = 'error'; }
-    );
-    tapeGen.classList.remove('rolling'); tapeGen.disabled = false;
-    stopReelSpin();
-  });
-
-  tapePlay.addEventListener('click', () => {
-    if (!audioBuffer) return;
-    if (isPlaying) { stopPlayback(); tapePlay.textContent = '▶ PLAY'; tapePlay.classList.remove('go'); return; }
-    const startedAt = startAudio();
-    tapePlay.textContent = '■ STOP'; tapePlay.classList.add('go');
-    tapeStat.textContent = 'PLAYING'; tapeStat.className = 'playing';
-    startReelSpin(true);
-    startVUMeter();
-    startProgressLoop(startedAt, p => {
-      if (!isPlaying) { stopReelSpin(); tapeStat.textContent = 'DONE'; tapeStat.className = ''; }
-    });
-  });
-
-  tapeDl.addEventListener('click', () => { if (tape_wavBlob) coreDownload(tape_wavBlob); });
-
-  function startReelSpin(slow = false) {
-    stopReelSpin();
-    const speed = slow ? 1.2 : 2.5;
-    function spin() {
-      tapeAngle = (tapeAngle + speed) % 360;
-      if (reelL) reelL.style.transform = `rotate(${tapeAngle}deg)`;
-      if (reelR) reelR.style.transform = `rotate(${-tapeAngle * 0.7}deg)`;
-      tapeAnimId = requestAnimationFrame(spin);
-    }
-    tapeAnimId = requestAnimationFrame(spin);
-  }
-  function stopReelSpin() {
-    if (tapeAnimId) { cancelAnimationFrame(tapeAnimId); tapeAnimId = null; }
-  }
-
-  // VU meter animation
-  let vuAnimId = null;
-  const vuSegs = document.querySelectorAll('.vu-seg');
-  function startVUMeter() {
-    stopVUMeter();
-    function tick() {
-      const level = isPlaying && analyser ? (() => {
-        const d = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(d);
-        return d.slice(0, 32).reduce((a,b)=>a+b,0) / (32*255);
-      })() : 0;
-      const lit = Math.round(level * vuSegs.length);
-      vuSegs.forEach((s, i) => {
-        s.className = 'vu-seg';
-        if (i < lit) {
-          if (i >= vuSegs.length - 3) s.classList.add('r');
-          else if (i >= vuSegs.length - 6) s.classList.add('y');
-          else s.classList.add('g');
-        }
-      });
-      vuAnimId = requestAnimationFrame(tick);
-    }
-    vuAnimId = requestAnimationFrame(tick);
-  }
-  function stopVUMeter() {
-    if (vuAnimId) { cancelAnimationFrame(vuAnimId); vuAnimId = null; }
-    vuSegs.forEach(s => s.className = 'vu-seg');
-  }
-
-  /* ══════════════════════════════════════════════════════════════════
-     UI 2 — SYNTH PANEL
-  ══════════════════════════════════════════════════════════════════ */
-  const synthGen    = document.getElementById('synth-gen');
-  const synthPlay   = document.getElementById('synth-play');
-  const synthDl     = document.getElementById('synth-dl');
-  const synthScope  = document.getElementById('synth-scope');
-  const synthScopeCtx = synthScope.getContext('2d');
-  const synthStat   = document.getElementById('synth-status');
-  const synthModeVal= document.getElementById('synth-mode-val');
-  const synthDurVal = document.getElementById('synth-dur-val');
-  const synthDurLine= document.getElementById('synth-dur-line');
-  const synthModeLine=document.getElementById('synth-mode-line');
-  let synth_wavBlob = null;
-  let synthDur      = 10;
-  const MODES       = ['glorb','retro','nature','scifi','haptic','radio','ui-pack','foley','underwater','weather','bell','bass','glitch','pinball','horror','granular','lofi'];
-  const MODES_LABEL = ['GLORB','RETRO','NATURE','SCI-FI','HAPTIC','RADIO','UI PCK','FOLEY','UNDRWTR','WTHR','BELL','BASS','GLITCH','PINBALL','HORROR','GRANULR','LO-FI'];
-  let synthModeIdx  = 0;
-
-  // Mode rotary — click to cycle
-  document.getElementById('synth-mode-rot').addEventListener('click', () => {
-    synthModeIdx = (synthModeIdx + 1) % MODES.length;
-    selectedMode = MODES[synthModeIdx];
-    synthModeVal.textContent = MODES_LABEL[synthModeIdx];
-    const angle = -135 + synthModeIdx * (270 / (MODES.length - 1));
-    const rad   = angle * Math.PI / 180;
-    const r = 24, cx = 32, cy = 32;
-    synthModeLine.setAttribute('x2', (cx + r * Math.sin(rad)).toFixed(1));
-    synthModeLine.setAttribute('y2', (cy - r * Math.cos(rad)).toFixed(1));
-    // update mode LEDs
-    document.querySelectorAll('#synth-mode-leds .sled').forEach((l, i) => {
-      l.className = 'sled y' + (i <= synthModeIdx ? ' on' : '');
-    });
-    syncAllModeDisplays();
-  });
-
-  // Duration knob — drag
-  const durKnob = document.getElementById('synth-dur-knob');
-  let durDragStart = null, durDragVal = 10;
-  durKnob.addEventListener('mousedown', e => { durDragStart = e.clientY; durDragVal = synthDur; e.preventDefault(); });
-  document.addEventListener('mousemove', e => {
-    if (durDragStart === null) return;
-    const delta = (durDragStart - e.clientY) / 2;
-    synthDur = Math.round(Math.max(1, Math.min(120, durDragVal + delta)));
-    synthDurVal.textContent = synthDur + 's';
-    const pct = (synthDur - 1) / 119;
-    const angle = -135 + pct * 270;
-    const rad = angle * Math.PI / 180, r = 24, cx = 32, cy = 32;
-    synthDurLine.setAttribute('x2', (cx + r * Math.sin(rad)).toFixed(1));
-    synthDurLine.setAttribute('y2', (cy - r * Math.cos(rad)).toFixed(1));
-  });
-  document.addEventListener('mouseup', () => { durDragStart = null; });
-
-  function drawSynthScope() {
-    const W = synthScope.offsetWidth || 200, H = synthScope.offsetHeight || 90;
-    synthScope.width = W; synthScope.height = H;
-    const c = synthScopeCtx;
-    c.clearRect(0, 0, W, H);
-    c.fillStyle = '#080f08'; c.fillRect(0, 0, W, H);
-    // grid
-    c.strokeStyle = 'rgba(0,255,50,.06)'; c.lineWidth = 1;
-    for (let x = 0; x < W; x += 20) { c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke(); }
-    for (let y = 0; y < H; y += 20) { c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke(); }
-    if (!audioBuffer) {
-      c.strokeStyle = 'rgba(0,200,50,.25)'; c.lineWidth = 1.5;
-      c.beginPath(); c.moveTo(0, H/2); c.lineTo(W, H/2); c.stroke(); return;
-    }
-    const data = audioBuffer.getChannelData(0);
-    const step = Math.ceil(data.length / W);
-    c.strokeStyle = '#00cc44'; c.shadowColor = '#00cc44'; c.shadowBlur = 4; c.lineWidth = 1.5;
-    c.beginPath();
-    for (let x = 0; x < W; x++) {
-      let max = 0;
-      for (let i = 0; i < step; i++) { const v = Math.abs(data[x*step+i]||0); if(v>max)max=v; }
-      const y = (1-max)*H/2, y2 = (1+max)*H/2;
-      if (x===0) c.moveTo(x, H/2); c.lineTo(x,y); c.lineTo(x,y2);
-    }
-    c.stroke(); c.shadowBlur = 0;
-  }
-  setTimeout(drawSynthScope, 100);
-
-  let synthLedAnimId = null;
-  function animateSynthLEDs() {
-    stopSynthLEDs();
-    const leds = [document.getElementById('sl0'),document.getElementById('sl1'),document.getElementById('sl2'),document.getElementById('sl3'),document.getElementById('sl4')];
-    const ledPlay = document.getElementById('synth-led-play');
-    if (ledPlay) ledPlay.classList.add('on');
-    let t = 0;
-    function tick() {
-      if (!analyser) { synthLedAnimId = requestAnimationFrame(tick); return; }
-      const d = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(d);
-      const level = d.slice(0, 64).reduce((a,b)=>a+b,0) / (64*255);
-      const lit = Math.round(level * leds.length);
-      leds.forEach((l,i) => { if (l) l.classList.toggle('on', i < lit); });
-      synthLedAnimId = requestAnimationFrame(tick);
-    }
-    synthLedAnimId = requestAnimationFrame(tick);
-  }
-  function stopSynthLEDs() {
-    if (synthLedAnimId) { cancelAnimationFrame(synthLedAnimId); synthLedAnimId = null; }
-    ['sl0','sl1','sl2','sl3','sl4'].forEach(id => { const l = document.getElementById(id); if(l)l.classList.remove('on'); });
-    const lp = document.getElementById('synth-led-play'); if(lp) lp.classList.remove('on');
-  }
-
-  synthGen.addEventListener('click', async () => {
-    if (isPlaying) stopPlayback();
-    synthGen.disabled = true; synthGen.classList.add('loading'); synthGen.textContent = '···';
-    synthStat.textContent = 'synthesizing…';
-    document.getElementById('synth-led-ready').classList.remove('on');
-    await coreGenerate(synthDur, null,
-      (buf, blob) => {
-        synth_wavBlob = blob;
-        synthPlay.style.display = synthDl.style.display = 'inline-block';
-        synthStat.textContent = `ready · ${buf.duration.toFixed(1)}s · ${buf.sampleRate/1000}kHz`;
-        document.getElementById('synth-led-ready').classList.add('on');
-        drawSynthScope();
-      },
-      msg => { synthStat.textContent = 'error: ' + msg; }
-    );
-    synthGen.disabled = false; synthGen.classList.remove('loading'); synthGen.textContent = 'GEN';
-  });
-
-  synthPlay.addEventListener('click', () => {
-    if (!audioBuffer) return;
-    if (isPlaying) { stopPlayback(); synthPlay.textContent = '▶ play'; synthPlay.classList.remove('playing'); return; }
-    const startedAt = startAudio();
-    synthPlay.textContent = '■ stop'; synthPlay.classList.add('playing');
-    startProgressLoop(startedAt); animateSynthLEDs();
-  });
-  synthDl.addEventListener('click', () => { if (synth_wavBlob) coreDownload(synth_wavBlob); });
-
-  /* ══════════════════════════════════════════════════════════════════
-     SYNC MODE DISPLAY ACROSS UIs
-  ══════════════════════════════════════════════════════════════════ */
-  function syncAllModeDisplays() {
-    // Synth mode value (if changed from outside synth UI)
-    const idx = MODES.indexOf(selectedMode);
-    if (idx >= 0 && idx !== synthModeIdx) {
-      synthModeIdx = idx;
-      if (synthModeVal) synthModeVal.textContent = MODES_LABEL[idx];
-    }
-    // Tape mode buttons
-    document.querySelectorAll('#tape-mode-btns .tmb').forEach(b => {
-      b.classList.toggle('active', b.dataset.mode === selectedMode);
-    });
-    // Glorb mode pills
-    modePills.forEach(p => p.classList.toggle('active', p.dataset.mode === selectedMode));
-  }
 
   /* ══════════════════════════════════════════════════════════════════
      ZOOM
@@ -1490,19 +891,10 @@
      INIT — restore persisted state
   ══════════════════════════════════════════════════════════════════ */
   (function init() {
-    const savedUI    = localStorage.getItem('glorb-ui') || 'glorb';
     const savedLight = localStorage.getItem('glorb-light') === '1';
     const savedZoom  = parseInt(localStorage.getItem('glorb-zoom') || '100', 10);
     if (savedLight) { btnLight.classList.add('active'); btnDark.classList.remove('active'); applyLight(true); }
     if (ZOOM_STEPS.includes(savedZoom) && savedZoom !== 100) applyZoom(savedZoom);
-    // Guard against saved terminal UI (now removed)
-    const validUIs = ['glorb', 'tape', 'synth'];
-    const ui = validUIs.includes(savedUI) ? savedUI : 'glorb';
-    if (ui !== 'glorb') {
-      const pill = document.querySelector(`#ui-switcher [data-ui="${ui}"]`);
-      if (pill) { uiSwitcherPills.forEach(x=>x.classList.remove('active')); pill.classList.add('active'); }
-      switchUI(ui);
-    }
   })();
 </script>
 </body>
