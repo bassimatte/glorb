@@ -725,6 +725,7 @@
   let animId      = null;
   let vizAnimId   = null;
   let vizActive   = false;
+  let bgStyle     = localStorage.getItem('glorb-bg') || 'dots';
 
   const root        = document.documentElement;
   const vizOverlay  = document.getElementById('viz-overlay');
@@ -770,6 +771,19 @@
     if (!audioBuffer) drawIdle(); else drawWaveform(audioBuffer, 1);
   }
   swatches.forEach(s => s.addEventListener('click', () => applyTheme(s.dataset.theme)));
+
+  /*  Background style picker  */
+  const bgPills = document.querySelectorAll('#bg-pills .pill');
+  function applyBgStyle(name) {
+    bgStyle = name;
+    localStorage.setItem('glorb-bg', name);
+    bgPills.forEach(p => p.classList.toggle('active', p.dataset.bg === name));
+    if (bgAnimId) { cancelAnimationFrame(bgAnimId); bgAnimId = null; }
+    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    _rings = [];
+    if (isPlaying || bgStyle !== 'none') startBgAnim();
+  }
+  bgPills.forEach(p => p.addEventListener('click', () => applyBgStyle(p.dataset.bg)));
 
   /* ══════════════════════════════════════════════════════════════════
      QUALITY PILLS (float drawer)
@@ -905,35 +919,119 @@
   function startBgAnim() {
     bgCanvas.classList.remove('idle');
     resizeBgCanvas();
-
-    const [ar, ag, ab] = hexToRgb(getCSSVar('--accent'));
+    if (bgStyle === 'none') return;
 
     function frame() {
       bgAnimId = requestAnimationFrame(frame);
       bgTime++;
       const W = bgCanvas.width, H = bgCanvas.height;
       const vol = _getVolume();
+      const [ar, ag, ab] = hexToRgb(getCSSVar('--accent'));
 
-      bgCtx.clearRect(0, 0, W, H);
+      //  Dot grid ─
+      if (bgStyle === 'dots') {
+        bgCtx.clearRect(0, 0, W, H);
+        const offX = (bgTime * 0.12) % DOT_SPACING;
+        const offY = (bgTime * 0.07) % DOT_SPACING;
+        _dotGrid.forEach(d => {
+          const x = d.x - offX, y = d.y - offY;
+          const dx = x - W / 2, dy = y - H / 2;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const wave = Math.sin(dist * 0.018 - bgTime * 0.06) * 0.5 + 0.5;
+          const brightness = 0.07 + wave * 0.06 + vol * 0.18;
+          const r = DOT_RADIUS * (1 + vol * 0.9 * wave);
+          bgCtx.beginPath();
+          bgCtx.arc(x, y, r, 0, Math.PI * 2);
+          bgCtx.fillStyle = `rgba(${ar},${ag},${ab},${brightness})`;
+          bgCtx.fill();
+        });
+      }
 
-      // Offset the whole grid slowly so it drifts rather than sitting static
-      const offX = (bgTime * 0.12) % DOT_SPACING;
-      const offY = (bgTime * 0.07) % DOT_SPACING;
+      //  Oscilloscope wave 
+      else if (bgStyle === 'wave') {
+        bgCtx.fillStyle = 'rgba(0,0,0,0.15)';
+        bgCtx.fillRect(0, 0, W, H);
+        if (analyser) {
+          const buf = new Uint8Array(analyser.fftSize);
+          analyser.getByteTimeDomainData(buf);
+          const step = W / buf.length;
+          // Draw 3 stacked offset lines for depth
+          for (let layer = 0; layer < 3; layer++) {
+            const yOff = (layer - 1) * H * 0.12;
+            const alpha = layer === 1 ? 0.18 + vol * 0.35 : 0.04 + vol * 0.08;
+            bgCtx.beginPath();
+            for (let i = 0; i < buf.length; i++) {
+              const v = (buf[i] / 128 - 1) * H * (0.18 + layer * 0.08);
+              const x = i * step, y = H / 2 + yOff + v;
+              i === 0 ? bgCtx.moveTo(x, y) : bgCtx.lineTo(x, y);
+            }
+            bgCtx.strokeStyle = `rgba(${ar},${ag},${ab},${alpha})`;
+            bgCtx.lineWidth = layer === 1 ? 1.5 : 0.8;
+            bgCtx.stroke();
+          }
+        }
+      }
 
-      _dotGrid.forEach(d => {
-        const x = d.x - offX, y = d.y - offY;
-        // Distance from center drives a gentle ripple
-        const dx = x - W / 2, dy = y - H / 2;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const wave = Math.sin(dist * 0.018 - bgTime * 0.06) * 0.5 + 0.5;
-        const brightness = 0.07 + wave * 0.06 + vol * 0.18;
-        const r = DOT_RADIUS * (1 + vol * 0.9 * wave);
+      //  Floating particles 
+      else if (bgStyle === 'particles') {
+        bgCtx.fillStyle = 'rgba(0,0,0,0.1)';
+        bgCtx.fillRect(0, 0, W, H);
+        _particles.forEach(p => {
+          p.vx += (Math.random() - 0.5) * vol * 0.4;
+          p.vy += (Math.random() - 0.5) * vol * 0.4;
+          p.vx *= 0.97; p.vy *= 0.97;
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+          if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+          const r = p.r * (1 + vol * 1.8);
+          bgCtx.beginPath();
+          bgCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          bgCtx.fillStyle = `rgba(${ar},${ag},${ab},${p.ba + vol * 0.22})`;
+          bgCtx.fill();
+        });
+      }
 
-        bgCtx.beginPath();
-        bgCtx.arc(x, y, r, 0, Math.PI * 2);
-        bgCtx.fillStyle = `rgba(${ar},${ag},${ab},${brightness})`;
-        bgCtx.fill();
-      });
+      //  Expanding rings 
+      else if (bgStyle === 'rings') {
+        bgCtx.fillStyle = 'rgba(0,0,0,0.09)';
+        bgCtx.fillRect(0, 0, W, H);
+        _ringTimer++;
+        const interval = Math.max(5, 28 - Math.floor(vol * 22));
+        if (_ringTimer >= interval && vol > 0.02) {
+          _rings.push({ x: W / 2, y: H / 2, r: 0,
+                        alpha: 0.35 + vol * 0.45, spd: 1.2 + vol * 3.5 });
+          _ringTimer = 0;
+        }
+        _rings = _rings.filter(rg => rg.alpha > 0.005);
+        _rings.forEach(rg => {
+          rg.r += rg.spd;
+          rg.alpha *= 0.968;
+          bgCtx.beginPath();
+          bgCtx.arc(rg.x, rg.y, rg.r, 0, Math.PI * 2);
+          bgCtx.strokeStyle = `rgba(${ar},${ag},${ab},${rg.alpha})`;
+          bgCtx.lineWidth = 1.2;
+          bgCtx.stroke();
+        });
+      }
+
+      //  Matrix rain 
+      else if (bgStyle === 'matrix') {
+        bgCtx.fillStyle = 'rgba(0,0,0,0.07)';
+        bgCtx.fillRect(0, 0, W, H);
+        _matrixCols.forEach(col => {
+          for (let i = 0; i < col.trail; i++) {
+            const ty = ((col.y - i * 16) % H + H) % H;
+            const alpha = (0.05 + vol * 0.18) * (1 - i / col.trail);
+            const r = Math.max(0.4, 2.8 - i * 0.28);
+            bgCtx.beginPath();
+            bgCtx.arc(col.x, ty, r, 0, Math.PI * 2);
+            bgCtx.fillStyle = `rgba(${ar},${ag},${ab},${alpha})`;
+            bgCtx.fill();
+          }
+          col.y += col.speed * (1 + vol * 2.2);
+          if (col.y > H + col.trail * 16) col.y = -col.trail * 16;
+        });
+      }
     }
     frame();
   }
@@ -948,6 +1046,8 @@
     bgCanvas.width  = window.innerWidth;
     bgCanvas.height = window.innerHeight;
     _buildDotGrid(bgCanvas.width, bgCanvas.height);
+    _initParticles(bgCanvas.width, bgCanvas.height);
+    _initMatrix(bgCanvas.width, bgCanvas.height);
   }
   window.addEventListener('resize', () => { if (bgAnimId) resizeBgCanvas(); });
 
@@ -1278,8 +1378,12 @@
   (function init() {
     const savedTheme = localStorage.getItem('glorb-theme') || 'dark';
     const savedZoom  = parseInt(localStorage.getItem('glorb-zoom') || '100', 10);
+    const savedBg    = localStorage.getItem('glorb-bg')    || 'dots';
     applyTheme(savedTheme);
     if (ZOOM_STEPS.includes(savedZoom) && savedZoom !== 100) applyZoom(savedZoom);
+    // mark correct bg pill without restarting anim (not playing yet)
+    bgPills.forEach(p => p.classList.toggle('active', p.dataset.bg === savedBg));
+    bgStyle = savedBg;
   })();
 </script>
 </body>
