@@ -7,5 +7,3 @@ services:
     envVars:
       - key: PORT
         value: 10000
-      - key: GLORB_MAX_DURATION
-        value: 60
