@@ -210,6 +210,43 @@
       text-align: right;
     }
 
+    /* ── Parameter knobs row ─────────────────────────────────────── */
+    .knobs-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .knob-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 140px;
+    }
+    .knob-icon {
+      font-size: 14px;
+      width: 18px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .knob-slider {
+      flex: 1;
+    }
+    .knob-label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      min-width: 44px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    /* Preview flash */
+    #btn-generate.previewing {
+      opacity: .6;
+    }
+
     /* Quality pills */
     .pills {
       display: flex;
@@ -541,6 +578,25 @@
       <button id="btn-download">↓ Save</button>
     </div>
 
+    <!-- Parameter knobs -->
+    <div class="knobs-row" id="knobs-row">
+      <div class="knob-wrap" title="Energy: sparse → dense">
+        <span class="knob-icon">⚡</span>
+        <input type="range" class="knob-slider" id="knob-energy" min="0" max="100" value="50" />
+        <span class="knob-label" id="knob-energy-lbl">Mid</span>
+      </div>
+      <div class="knob-wrap" title="Brightness: dark → bright">
+        <span class="knob-icon">☀</span>
+        <input type="range" class="knob-slider" id="knob-bright" min="0" max="100" value="50" />
+        <span class="knob-label" id="knob-bright-lbl">Mid</span>
+      </div>
+      <div class="knob-wrap" title="Chaos: ordered → glitchy">
+        <span class="knob-icon">🌀</span>
+        <input type="range" class="knob-slider" id="knob-chaos" min="0" max="100" value="50" />
+        <span class="knob-label" id="knob-chaos-lbl">Mid</span>
+      </div>
+    </div>
+
     <div id="gen-progress-wrap"><div id="gen-progress-bar"></div></div>
 
   </div>
@@ -658,6 +714,9 @@
   let selectedMode    = 'glorb';
   let selectedVariant = 'random';
   let selectedDur     = 10;
+  let knobEnergy  = 50;   // 0–100
+  let knobBright  = 50;   // 0–100
+  let knobChaos   = 50;   // 0–100
   let animId      = null;
   let vizAnimId   = null;
   let vizActive   = false;
@@ -725,7 +784,8 @@
   async function coreGenerate(duration, onProgress, onDone, onError) {
     stopPlayback();
     try {
-      const body = { duration, quality: selectedQ, mode: selectedMode };
+      const body = { duration, quality: selectedQ, mode: selectedMode,
+                     energy: knobEnergy, brightness: knobBright, chaos: knobChaos };
       if (selectedMode === 'nature' && selectedVariant !== 'random') body.variant = selectedVariant;
       onProgress?.('generating…');
       const res = await fetch('/generate', {
@@ -924,6 +984,53 @@
   sliderDur.addEventListener('input', () => {
     selectedDur = +sliderDur.value;
     durVal.textContent = selectedDur + 's';
+  });
+
+  /* ── Parameter knobs ─────────────────────────────────────────────── */
+  const knobEnergyEl = document.getElementById('knob-energy');
+  const knobBrightEl = document.getElementById('knob-bright');
+  const knobChaosEl  = document.getElementById('knob-chaos');
+  const knobEnergyLbl = document.getElementById('knob-energy-lbl');
+  const knobBrightLbl = document.getElementById('knob-bright-lbl');
+  const knobChaosLbl  = document.getElementById('knob-chaos-lbl');
+
+  const KNOB_LABELS = v => v < 20 ? 'Min' : v < 40 ? 'Low' : v < 60 ? 'Mid' : v < 80 ? 'High' : 'Max';
+
+  let previewTimer = null;
+  function schedulePreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(async () => {
+      if (btnGen.disabled) return;
+      btnGen.classList.add('previewing');
+      setStatus('preview…', 'active');
+      await coreGenerate(3,
+        null,
+        (buf) => {
+          btnGen.classList.remove('previewing');
+          const startedAt = startAudio();
+          startProgressLoop(startedAt);
+          updateAllPlayButtons();
+          setStatus('preview — hit Generate for full clip', 'active');
+        },
+        (err) => { btnGen.classList.remove('previewing'); setStatus('error: ' + err, 'error'); }
+      );
+    }, 600);  // 600ms debounce
+  }
+
+  knobEnergyEl.addEventListener('input', () => {
+    knobEnergy = +knobEnergyEl.value;
+    knobEnergyLbl.textContent = KNOB_LABELS(knobEnergy);
+    schedulePreview();
+  });
+  knobBrightEl.addEventListener('input', () => {
+    knobBright = +knobBrightEl.value;
+    knobBrightLbl.textContent = KNOB_LABELS(knobBright);
+    schedulePreview();
+  });
+  knobChaosEl.addEventListener('input', () => {
+    knobChaos = +knobChaosEl.value;
+    knobChaosLbl.textContent = KNOB_LABELS(knobChaos);
+    schedulePreview();
   });
 
   const modePills = document.querySelectorAll('.mode-pill');

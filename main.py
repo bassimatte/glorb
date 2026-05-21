@@ -31,6 +31,17 @@ QUALITY_PRESETS = {
 
 SAMPLE_RATE = 44100  # may be overridden by --quality preset
 
+# ---------------------------------------------------------------------------
+# Knob parameters (set by server from UI sliders, 0–100 each)
+# ---------------------------------------------------------------------------
+KNOB_ENERGY     = 50   # sparse(0) ↔ dense(100) — gap size & event density
+KNOB_BRIGHTNESS = 50   # dark(0) ↔ bright(100)  — frequency range bias
+KNOB_CHAOS      = 50   # ordered(0) ↔ glitchy(100) — randomness & effect depth
+
+def _knob(val, lo, hi):
+    """Map a 0–100 knob value linearly to [lo, hi]."""
+    return lo + (hi - lo) * (val / 100.0)
+
 
 # ---------------------------------------------------------------------------
 # Waveform generators
@@ -170,31 +181,34 @@ STYLES = ["metallic", "echo", "plain"]
 
 
 def make_blip():
-    """Synthesize a single blip/blop matching the reference characteristics."""
-    # Frequency: 120–1764Hz, weighted toward 600–1000Hz
+    """Synthesize a single blip/blop — shaped by KNOB_ENERGY, KNOB_BRIGHTNESS, KNOB_CHAOS."""
+    # BRIGHTNESS: low → darker frequencies, high → brighter
+    freq_lo = _knob(KNOB_BRIGHTNESS, 80,  400)
+    freq_hi = _knob(KNOB_BRIGHTNESS, 400, 3500)
     freq = random.choices(
-        [random.uniform(120, 400),
-         random.uniform(400, 900),
-         random.uniform(900, 1764)],
+        [random.uniform(freq_lo, freq_lo * 2.5),
+         random.uniform(freq_lo * 2.5, freq_hi * 0.7),
+         random.uniform(freq_hi * 0.7, freq_hi)],
         weights=[1, 3, 2],
     )[0]
 
-    # Duration: 5–95ms (reference mean ~20ms)
-    duration = random.uniform(0.005, 0.095)
+    # ENERGY: low → shorter blips, high → longer blips
+    dur_lo = _knob(KNOB_ENERGY, 0.004, 0.04)
+    dur_hi = _knob(KNOB_ENERGY, 0.02,  0.18)
+    duration = random.uniform(dur_lo, dur_hi)
 
-    # Pick waveform
+    # Pick waveform — CHAOS shifts toward more complex waveforms
+    chaos_w = KNOB_CHAOS / 100.0
     waveform_fn = random.choices(
         [sine_wave, fm_metallic, additive_harmonics, chirp],
-        weights=[2, 3, 2, 3],
+        weights=[max(0.3, 2 - chaos_w * 1.5), 3, 2, max(1, 1 + chaos_w * 3)],
     )[0]
 
     signal = waveform_fn(freq, duration)
     signal = apply_envelope(signal)
 
-    # Style: metallic keeps dry signal with harmonics; echo adds tail
     style = random.choices(STYLES, weights=[3, 3, 2])[0]
     if style == "metallic":
-        # Add a subtle ring/metallic layer
         ring_freq = freq * random.choice([1.41, 2.73, 3.14])
         ring = sine_wave(ring_freq, duration)
         ring = apply_envelope(ring)
@@ -204,20 +218,21 @@ def make_blip():
         feedback = random.uniform(0.25, 0.5)
         signal = apply_echo(signal, delay=delay, feedback=feedback)
 
-    # Always add a touch of reverb
     if random.random() < 0.6:
         signal = apply_reverb(signal, decay=random.uniform(0.2, 0.5), num_echoes=random.randint(2, 5))
 
-    # Organic processing chain
-    signal = pitch_wobble(signal, rate_hz=random.uniform(4.0, 10.0), depth=random.uniform(0.001, 0.005))
-    signal = soft_saturate(signal, drive=random.uniform(1.2, 2.5))
-    signal = add_noise(signal, amount=random.uniform(0.002, 0.006))
+    # CHAOS: increases drive, noise, wobble depth
+    wobble_depth  = _knob(KNOB_CHAOS, 0.001, 0.012)
+    drive         = _knob(KNOB_CHAOS, 1.1,   3.5)
+    noise_amount  = _knob(KNOB_CHAOS, 0.001, 0.015)
+    signal = pitch_wobble(signal, rate_hz=random.uniform(4.0, 10.0), depth=wobble_depth)
+    signal = soft_saturate(signal, drive=drive)
+    signal = add_noise(signal, amount=noise_amount)
 
     peak = np.max(np.abs(signal))
     if peak > 0:
         signal = signal / peak * 0.7
 
-    # Stereo widening
     stereo = to_stereo(signal)
     return stereo, style, round(freq)
 

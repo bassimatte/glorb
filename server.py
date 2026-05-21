@@ -55,6 +55,11 @@ def generate():
     mode     = data.get("mode", "glorb")
     variant  = data.get("variant", None)   # for nature mode
 
+    # Knob params (0–100, default 50)
+    bb.KNOB_ENERGY     = max(0, min(100, int(data.get("energy",     50))))
+    bb.KNOB_BRIGHTNESS = max(0, min(100, int(data.get("brightness", 50))))
+    bb.KNOB_CHAOS      = max(0, min(100, int(data.get("chaos",      50))))
+
     duration = max(1.0, min(duration, 300.0))
     if quality not in bb.QUALITY_PRESETS:
         quality = "high"
@@ -177,9 +182,11 @@ def generate():
     # ── Glorb (default) → single WAV ─────────────────────────────
     import random
     parts, total = [], 0.0
+    gap_lo = bb._knob(bb.KNOB_ENERGY, 0.22, 0.003)   # high energy → tiny gaps
+    gap_hi = bb._knob(bb.KNOB_ENERGY, 0.80, 0.06)
     while total < duration:
         signal, _style, _freq = bb.make_blip()
-        gap = random.uniform(0.005, 0.225)
+        gap = random.uniform(gap_lo, gap_hi)
         parts.append(signal)
         parts.append(bb.silence(gap))
         total += len(signal) / bb.SAMPLE_RATE + gap
