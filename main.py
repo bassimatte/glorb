@@ -19,6 +19,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 import random
+from scipy.ndimage import maximum_filter1d
 
 # Quality presets: (sample_rate, sf_subtype, label)
 QUALITY_PRESETS = {
@@ -305,8 +306,23 @@ _PENTA = [130.8, 146.8, 164.8, 196.0, 220.0,
 
 
 def _square(freq, duration, duty=0.5):
+    """Bandlimited pulse/square wave via truncated Fourier series.
+    Eliminates aliasing by summing only harmonics below the Nyquist limit.
+    Fourier coefficients for a bipolar pulse with duty cycle D:
+        a_k = 2*sin(2*pi*k*D) / (pi*k)
+        b_k = 2*(1 - cos(2*pi*k*D)) / (pi*k)
+        DC  = 2*D - 1
+    """
     t = _t(duration)
-    return np.where(np.sin(2 * np.pi * freq * t) >= np.cos(np.pi * duty), 1.0, -1.0).astype(np.float64)
+    max_h = min(500, max(1, int(SAMPLE_RATE / (2.0 * max(float(freq), 1.0)))))
+    ks = np.arange(1, max_h + 1, dtype=np.float64)
+    two_pi_k_D = 2.0 * np.pi * ks * duty
+    ak = 2.0 * np.sin(two_pi_k_D) / (np.pi * ks)
+    bk = 2.0 * (1.0 - np.cos(two_pi_k_D)) / (np.pi * ks)
+    phases = 2.0 * np.pi * freq * np.outer(ks, t)   # (max_h, N)
+    signal = float(2 * duty - 1) + np.dot(ak, np.cos(phases)) + np.dot(bk, np.sin(phases))
+    peak = np.max(np.abs(signal)) + 1e-9
+    return (signal / peak).astype(np.float64)
 
 
 def _pulse_env(n, hold_frac=0.4):
@@ -552,13 +568,12 @@ def _ui_confirm():
 
 def _ui_error():
     f = random.choice([180, 200, 220])
-    t = _t(0.15)
-    # Buzz: square-ish with dissonance
-    s = np.sign(np.sin(2 * np.pi * f * t)) * 0.5
-    s += np.sign(np.sin(2 * np.pi * f * 1.08 * t)) * 0.3
-    n = len(s)
-    env = np.concatenate([np.linspace(0,1, int(0.005*SAMPLE_RATE)),
-                           np.exp(-np.linspace(0, 4, n - int(0.005*SAMPLE_RATE)))])
+    n = int(0.15 * SAMPLE_RATE)
+    # Bandlimited square + detuned square for dissonance
+    s = _square(f,        0.15, duty=0.5) * 0.5
+    s += _square(f * 1.08, 0.15, duty=0.5) * 0.3
+    env = np.concatenate([np.linspace(0, 1, int(0.005 * SAMPLE_RATE)),
+                          np.exp(-np.linspace(0, 4, n - int(0.005 * SAMPLE_RATE)))])
     s = s * env[:n]
     return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.6)
 
@@ -926,13 +941,42 @@ def make_radio_sequence(target_duration=10.0):
 # Shared helpers
 # =============================================================================
 
+def lookahead_limiter(audio, threshold=0.98, lookahead_ms=5.0, release_ms=50.0):
+    """True-peak lookahead limiter.
+    Detects peaks up to `lookahead_ms` ahead and applies smooth gain reduction,
+    recovering at release_ms. Catches transient clips while preserving dynamics.
+    """
+    stereo = audio.ndim == 2
+    x = np.asarray(audio, dtype=np.float64)
+    envelope = np.max(np.abs(x), axis=1) if stereo else np.abs(x)
+
+    la  = max(1, int(lookahead_ms * SAMPLE_RATE / 1000))
+    rel = max(1, int(release_ms   * SAMPLE_RATE / 1000))
+
+    # Rolling peak over future `la` samples (lookahead window)
+    peak_env = maximum_filter1d(envelope, size=la, origin=-(la // 2))
+
+    # Gain ceiling: reduce instantly when peak exceeds threshold
+    gain = np.where(peak_env > threshold, threshold / (peak_env + 1e-12), 1.0)
+
+    # Release: gain recovers at most 1/rel per sample (smooth upward ramp)
+    release_step = 1.0 / rel
+    for i in range(1, len(gain)):
+        ceiling = min(1.0, gain[i - 1] + release_step)
+        if gain[i] > ceiling:
+            gain[i] = ceiling
+
+    return (x * (gain[:, None] if stereo else gain)).astype(np.float32)
+
+
 def _finalise(audio, target_duration):
-    """Trim/pad to exact duration and peak-normalise."""
+    """Trim/pad to exact duration, apply lookahead limiting, then peak-normalise."""
     target_samples = int(target_duration * SAMPLE_RATE)
     audio = audio[:target_samples]
     if len(audio) < target_samples:
         pad = target_samples - len(audio)
         audio = np.pad(audio, ((0, pad), (0, 0)))
+    audio = lookahead_limiter(audio)          # catch transient peaks
     peak = np.max(np.abs(audio))
     if peak > 0:
         audio = audio / peak * 0.9886

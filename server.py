@@ -18,7 +18,24 @@ import main as bb
 app = Flask(__name__)
 
 
+_DITHER_BITS = {"PCM_16": 16, "PCM_24": 24, "PCM_32": 32}
+
+def _apply_tpdf_dither(audio, subtype):
+    """TPDF dither: add triangular noise of amplitude 1 LSB before quantisation.
+    Converts deterministic quantisation distortion into inaudible white noise.
+    No-op for floating-point subtypes.
+    """
+    bits = _DITHER_BITS.get(subtype)
+    if bits is None:
+        return audio
+    lsb = 2.0 / (2 ** bits)
+    r1 = np.random.uniform(-0.5, 0.5, audio.shape).astype(np.float32)
+    r2 = np.random.uniform(-0.5, 0.5, audio.shape).astype(np.float32)
+    return audio + (r1 + r2) * lsb   # triangular PDF, peak amplitude = 1 LSB
+
+
 def _wav_bytes(audio, sample_rate, subtype):
+    audio = _apply_tpdf_dither(audio, subtype)
     buf = io.BytesIO()
     sf.write(buf, audio, sample_rate, subtype=subtype, format="WAV")
     buf.seek(0)
