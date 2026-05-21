@@ -417,7 +417,7 @@
     .vu-seg.y { background: #ccaa00; box-shadow: 0 0 4px #ccaa00; }
     .vu-seg.r { background: #ff3322; box-shadow: 0 0 5px #ff3322; }
     .deck-mid { padding: 0 24px 16px; display: flex; flex-direction: column; gap: 12px; }
-    .tape-modes { display: flex; gap: 5px; }
+    .tape-modes { display: flex; gap: 5px; flex-wrap: wrap; }
     .tmb {
       flex: 1; padding: 7px 2px; font-size: 9px; letter-spacing: 0.1em;
       text-transform: uppercase; font-family: var(--font);
@@ -577,6 +577,16 @@
         <button class="mode-pill" data-mode="haptic">Haptic</button>
         <button class="mode-pill" data-mode="radio">Radio</button>
         <button class="mode-pill" data-mode="ui-pack">UI Pack</button>
+        <button class="mode-pill" data-mode="foley">Foley</button>
+        <button class="mode-pill" data-mode="underwater">Underwater</button>
+        <button class="mode-pill" data-mode="weather">Weather</button>
+        <button class="mode-pill" data-mode="bell">Bell</button>
+        <button class="mode-pill" data-mode="bass">Bass</button>
+        <button class="mode-pill" data-mode="glitch">Glitch</button>
+        <button class="mode-pill" data-mode="pinball">Pinball</button>
+        <button class="mode-pill" data-mode="horror">Horror</button>
+        <button class="mode-pill" data-mode="granular">Granular</button>
+        <button class="mode-pill" data-mode="lofi">Lo-Fi</button>
       </div>
     </div>
     <div class="row" id="nature-row" style="display:none">
@@ -654,6 +664,16 @@
         <button class="tmb" data-mode="haptic">HAP</button>
         <button class="tmb" data-mode="radio">RAD</button>
         <button class="tmb" data-mode="ui-pack">UIP</button>
+        <button class="tmb" data-mode="foley">FOL</button>
+        <button class="tmb" data-mode="underwater">UNW</button>
+        <button class="tmb" data-mode="weather">WTH</button>
+        <button class="tmb" data-mode="bell">BEL</button>
+        <button class="tmb" data-mode="bass">BAS</button>
+        <button class="tmb" data-mode="glitch">GLT</button>
+        <button class="tmb" data-mode="pinball">PIN</button>
+        <button class="tmb" data-mode="horror">HOR</button>
+        <button class="tmb" data-mode="granular">GRN</button>
+        <button class="tmb" data-mode="lofi">LFI</button>
       </div>
       <div class="tape-dur-row">
         <span class="tdlabel">Duration</span>
@@ -697,6 +717,9 @@
           </div>
           <div class="synth-leds" id="synth-mode-leds">
             <div class="sled y on"></div><div class="sled y"></div><div class="sled y"></div>
+            <div class="sled y"></div><div class="sled y"></div><div class="sled y"></div><div class="sled y"></div>
+            <div class="sled y"></div><div class="sled y"></div><div class="sled y"></div>
+            <div class="sled y"></div><div class="sled y"></div><div class="sled y"></div>
             <div class="sled y"></div><div class="sled y"></div><div class="sled y"></div><div class="sled y"></div>
           </div>
         </div>
@@ -1223,8 +1246,8 @@
   const synthModeLine=document.getElementById('synth-mode-line');
   let synth_wavBlob = null;
   let synthDur      = 10;
-  const MODES       = ['glorb','retro','nature','scifi','haptic','radio','ui-pack'];
-  const MODES_LABEL = ['GLORB','RETRO','NATURE','SCI-FI','HAPTIC','RADIO','UI PCK'];
+  const MODES       = ['glorb','retro','nature','scifi','haptic','radio','ui-pack','foley','underwater','weather','bell','bass','glitch','pinball','horror','granular','lofi'];
+  const MODES_LABEL = ['GLORB','RETRO','NATURE','SCI-FI','HAPTIC','RADIO','UI PCK','FOLEY','UNDRWTR','WTHR','BELL','BASS','GLITCH','PINBALL','HORROR','GRANULR','LO-FI'];
   let synthModeIdx  = 0;
 
   // Mode rotary — click to cycle

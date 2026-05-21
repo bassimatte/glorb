@@ -97,6 +97,66 @@ def generate():
         return send_file(buf, mimetype="audio/wav",
                          as_attachment=False, download_name="glorb_retro.wav")
 
+    if mode == "foley":
+        audio = bb.make_foley_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_foley.wav")
+
+    if mode == "underwater":
+        audio = bb.make_underwater_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_underwater.wav")
+
+    if mode == "weather":
+        audio = bb.make_weather_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_weather.wav")
+
+    if mode == "bell":
+        audio = bb.make_bell_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_bell.wav")
+
+    if mode == "bass":
+        audio = bb.make_bass_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_bass.wav")
+
+    if mode == "glitch":
+        audio = bb.make_glitch_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_glitch.wav")
+
+    if mode == "pinball":
+        audio = bb.make_pinball_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_pinball.wav")
+
+    if mode == "horror":
+        audio = bb.make_horror_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_horror.wav")
+
+    if mode == "granular":
+        audio = bb.make_granular_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_granular.wav")
+
+    if mode == "lofi":
+        audio = bb.make_lofi_sequence(duration)
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_lofi.wav")
+
     # ── Glorb (default) → single WAV ─────────────────────────────
     import random
     parts, total = [], 0.0
