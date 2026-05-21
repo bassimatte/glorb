@@ -955,10 +955,11 @@
   }
 
   function updateAllPlayButtons() {
-    document.querySelectorAll('.play-btn-ref').forEach(b => {
-      b.textContent = isPlaying ? '■ stop' : (b.dataset.playLabel || '▶ play');
-      b.classList.toggle('playing', isPlaying);
-    });
+    // Glorb play button
+    if (btnPlay) {
+      btnPlay.textContent = isPlaying ? '■ Stop' : '▶ Play';
+      btnPlay.classList.toggle('playing', isPlaying);
+    }
     const tbtnPlay = document.getElementById('tape-play');
     if (tbtnPlay) {
       tbtnPlay.textContent = isPlaying ? '■ STOP' : '▶ PLAY';
