@@ -454,6 +454,8 @@
       // UI Pack: hide duration slider (it generates fixed set)
       document.querySelector('.slider-wrap').parentElement.style.display =
         selectedMode === 'ui-pack' ? 'none' : 'flex';
+      // Save button label hints ZIP vs WAV
+      btnDl.textContent = selectedMode === 'ui-pack' ? '↓ ZIP' : '↓ Save';
     });
   });
 
@@ -596,11 +598,30 @@
   });
 
   /* ── Download button ────────────────────────────────────────────── */
-  btnDl.addEventListener('click', () => {
+  btnDl.addEventListener('click', async () => {
+    if (selectedMode === 'ui-pack') {
+      // Fetch individual WAVs as ZIP
+      setStatus('building zip…', 'active');
+      btnDl.disabled = true;
+      try {
+        const res  = await fetch(`/ui-pack-zip?quality=${selectedQ}`);
+        const blob = await res.blob();
+        const a    = document.createElement('a');
+        a.href     = URL.createObjectURL(blob);
+        a.download = `glorb_ui_pack_${Date.now()}.zip`;
+        a.click();
+        setStatus('zip downloaded — 7 individual wavs');
+      } catch (err) {
+        setStatus(err.message, 'error');
+      } finally {
+        btnDl.disabled = false;
+      }
+      return;
+    }
     if (!btnDl._wavBlob) return;
     const a   = document.createElement('a');
     a.href    = URL.createObjectURL(btnDl._wavBlob);
-    a.download = btnDl._isZip ? `glorb_ui_pack_${Date.now()}.zip` : `glorb_${selectedMode}_${Date.now()}.wav`;
+    a.download = `glorb_${selectedMode}_${Date.now()}.wav`;
     a.click();
   });
 
@@ -631,14 +652,14 @@
       const isZip = res.headers.get('content-type')?.includes('zip');
 
       if (isZip) {
-        // UI Pack: just offer download, no playback
+        // fallback (shouldn't happen with current server)
         const blob = await res.blob();
         btnDl._wavBlob  = blob;
         btnDl._isZip    = true;
         btnDl.style.display = 'inline-block';
         audioBuffer = null;
         drawIdle();
-        setStatus('ui pack ready — 7 sounds · download to unzip');
+        setStatus('ui pack ready — download to unzip');
       } else {
         const arrayBuf = await res.arrayBuffer();
         const wavBlob  = new Blob([arrayBuf], { type: 'audio/wav' });
@@ -648,7 +669,10 @@
         btnDl._wavBlob = wavBlob;
         btnDl._isZip   = false;
         btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'inline-block';
-        setStatus(`ready — ${audioBuffer.duration.toFixed(1)}s · ${audioBuffer.sampleRate/1000}kHz · stereo`);
+        const label = selectedMode === 'ui-pack'
+          ? `preview — ${audioBuffer.duration.toFixed(1)}s · 7 sounds · save = zip`
+          : `ready — ${audioBuffer.duration.toFixed(1)}s · ${audioBuffer.sampleRate/1000}kHz · stereo`;
+        setStatus(label);
       }
     } catch (err) {
       setStatus(err.message, 'error');

@@ -45,20 +45,21 @@ def generate():
     sample_rate, subtype, _ = bb.QUALITY_PRESETS[quality]
     bb.SAMPLE_RATE = sample_rate
 
-    # ── UI Pack → ZIP of individual WAVs ──────────────────────────
+    # ── UI Pack → concatenated WAV for playback ───────────────────
     if mode == "ui-pack":
         sounds = bb.make_ui_pack()
-        zip_buf = io.BytesIO()
-        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for name, audio in sounds.items():
-                peak = np.max(np.abs(audio))
-                if peak > 0:
-                    audio = audio / peak * 0.9886
-                wav = _wav_bytes(audio, sample_rate, subtype)
-                zf.writestr(f"{name}.wav", wav.read())
-        zip_buf.seek(0)
-        return send_file(zip_buf, mimetype="application/zip",
-                         as_attachment=False, download_name="glorb_ui_pack.zip")
+        silence_gap = bb.silence(0.25)
+        parts = []
+        for audio in sounds.values():
+            peak = np.max(np.abs(audio))
+            if peak > 0:
+                audio = audio / peak * 0.9886
+            parts.append(audio)
+            parts.append(silence_gap)
+        combined = np.concatenate(parts[:-1])  # drop trailing gap
+        buf = _wav_bytes(combined, sample_rate, subtype)
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name="glorb_ui_pack_preview.wav")
 
     # ── Nature → single WAV ───────────────────────────────────────
     if mode == "nature":
@@ -89,6 +90,29 @@ def generate():
     buf = _wav_bytes(audio, sample_rate, subtype)
     return send_file(buf, mimetype="audio/wav",
                      as_attachment=False, download_name="glorb.wav")
+
+
+@app.route("/ui-pack-zip")
+def ui_pack_zip():
+    """Return all UI Pack sounds as a ZIP of individual WAV files."""
+    quality = request.args.get("quality", "high")
+    if quality not in bb.QUALITY_PRESETS:
+        quality = "high"
+    sample_rate, subtype, _ = bb.QUALITY_PRESETS[quality]
+    bb.SAMPLE_RATE = sample_rate
+
+    sounds = bb.make_ui_pack()
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, audio in sounds.items():
+            peak = np.max(np.abs(audio))
+            if peak > 0:
+                audio = audio / peak * 0.9886
+            wav = _wav_bytes(audio, sample_rate, subtype)
+            zf.writestr(f"{name}.wav", wav.read())
+    zip_buf.seek(0)
+    return send_file(zip_buf, mimetype="application/zip",
+                     as_attachment=False, download_name="glorb_ui_pack.zip")
 
 
 @app.route("/nature-variants")
