@@ -13,7 +13,7 @@
       --bg:      #090909;
       --surface: #111111;
       --border:  #1e1e1e;
-      --text:    #e8e8e8;
+      --fg:      #e8e8e8;
       --muted:   #444;
       --accent:  #00ff88;
       --danger:  #ff3b5c;
@@ -23,23 +23,66 @@
       --glow-btn:rgba(0,255,136,.2);
       --glow-btn-hover: rgba(0,255,136,.35);
     }
-    /* ── Light mode overlay ──────────────────────────────────────── */
-    :root[data-light] {
-      --bg:      #f2f2f2;
+    :root[data-theme="light"] {
+      --bg:      #f5f5f0;
       --surface: #ffffff;
-      --border:  #d8d8d8;
-      --text:    #111111;
-      --muted:   #999999;
-      --accent:  #00aa55;
+      --border:  #e0e0d8;
+      --fg:      #1a1a1a;
+      --muted:   #888888;
+      --accent:  #007a3d;
       --glow:    rgba(0,0,0,.06);
-      --glow-btn:rgba(0,170,85,.12);
-      --glow-btn-hover: rgba(0,170,85,.2);
+      --glow-btn:rgba(0,122,61,.12);
+      --glow-btn-hover: rgba(0,122,61,.22);
+    }
+    :root[data-theme="neon"] {
+      --bg:      #08000f;
+      --surface: #10001e;
+      --border:  #240040;
+      --fg:      #eeddff;
+      --muted:   #5a3080;
+      --accent:  #ee00cc;
+      --glow:    rgba(238,0,204,.25);
+      --glow-btn:rgba(238,0,204,.2);
+      --glow-btn-hover: rgba(238,0,204,.38);
+    }
+    :root[data-theme="amber"] {
+      --bg:      #080600;
+      --surface: #0f0c00;
+      --border:  #261e00;
+      --fg:      #ffdd88;
+      --muted:   #5a4400;
+      --accent:  #ffaa00;
+      --glow:    rgba(255,170,0,.25);
+      --glow-btn:rgba(255,170,0,.2);
+      --glow-btn-hover: rgba(255,170,0,.38);
+    }
+    :root[data-theme="ocean"] {
+      --bg:      #00080e;
+      --surface: #001018;
+      --border:  #002030;
+      --fg:      #cce8ff;
+      --muted:   #1e5a80;
+      --accent:  #00ccff;
+      --glow:    rgba(0,204,255,.25);
+      --glow-btn:rgba(0,204,255,.2);
+      --glow-btn-hover: rgba(0,204,255,.38);
+    }
+    :root[data-theme="sakura"] {
+      --bg:      #0e0008;
+      --surface: #180010;
+      --border:  #2e0020;
+      --fg:      #ffe8f2;
+      --muted:   #7a3060;
+      --accent:  #ff5599;
+      --glow:    rgba(255,85,153,.25);
+      --glow-btn:rgba(255,85,153,.2);
+      --glow-btn-hover: rgba(255,85,153,.38);
     }
 
     html, body {
       height: 100%;
       background: var(--bg);
-      color: var(--text);
+      color: var(--fg);
       font-family: var(--font);
       font-size: 13px;
       letter-spacing: 0.03em;
@@ -221,7 +264,7 @@
       background: transparent;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      color: var(--text);
+      color: var(--fg);
       font-family: var(--font);
       font-size: 13px;
       font-weight: 600;
@@ -312,6 +355,17 @@
     #status.active { color: var(--accent); }
     #status.error  { color: var(--danger); }
 
+    /* ── Theme swatches ───────────────────────────────────────────── */
+    .theme-swatches { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .swatch {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--sw-color); border: 2px solid transparent;
+      cursor: pointer; transition: transform .15s, border-color .15s;
+      padding: 0;
+    }
+    .swatch:hover  { transform: scale(1.25); }
+    .swatch.active { border-color: var(--fg); box-shadow: 0 0 0 1px var(--bg); }
+
     /* ── Floating gear + info ─────────────────────────────────────── */
     #float-gear, #float-info {
       position: fixed; bottom: 24px; z-index: 100;
@@ -391,7 +445,7 @@
     }
     .zoom-btn:hover { color: var(--accent); border-color: var(--accent); }
     .zoom-val {
-      font-size: 12px; color: var(--text); font-family: var(--font);
+      font-size: 12px; color: var(--fg); font-family: var(--font);
       min-width: 40px; text-align: center; letter-spacing: 0.06em;
     }
 
@@ -546,10 +600,14 @@
 </div>
 <div id="float-drawer">
   <div class="dr">
-    <span class="dr-label">Appearance</span>
-    <div class="pills">
-      <button class="pill active" id="btn-dark">Dark</button>
-      <button class="pill" id="btn-light">Light</button>
+    <span class="dr-label">Theme</span>
+    <div class="theme-swatches" id="theme-swatches">
+      <button class="swatch active" data-theme="dark"   style="--sw-color:#00ff88" title="Dark"></button>
+      <button class="swatch"        data-theme="light"  style="--sw-color:#f5f5f0" title="Light"></button>
+      <button class="swatch"        data-theme="neon"   style="--sw-color:#ee00cc" title="Neon"></button>
+      <button class="swatch"        data-theme="amber"  style="--sw-color:#ffaa00" title="Amber"></button>
+      <button class="swatch"        data-theme="ocean"  style="--sw-color:#00ccff" title="Ocean"></button>
+      <button class="swatch"        data-theme="sakura" style="--sw-color:#ff5599" title="Sakura"></button>
     </div>
   </div>
   <div class="dr">
@@ -625,19 +683,17 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') infoModal.classList.remove('open'); });
 
   /* ══════════════════════════════════════════════════════════════════
-     LIGHT / DARK
+     THEME
   ══════════════════════════════════════════════════════════════════ */
-  const btnDark  = document.getElementById('btn-dark');
-  const btnLight = document.getElementById('btn-light');
+  const swatches = document.querySelectorAll('#theme-swatches .swatch');
 
-  function applyLight(light) {
-    if (light) root.setAttribute('data-light', '');
-    else       root.removeAttribute('data-light');
-    localStorage.setItem('glorb-light', light ? '1' : '');
+  function applyTheme(name) {
+    root.setAttribute('data-theme', name);
+    localStorage.setItem('glorb-theme', name);
+    swatches.forEach(s => s.classList.toggle('active', s.dataset.theme === name));
     if (!audioBuffer) drawIdle(); else drawWaveform(audioBuffer, 1);
   }
-  btnDark.addEventListener('click',  () => { btnDark.classList.add('active');  btnLight.classList.remove('active'); applyLight(false); });
-  btnLight.addEventListener('click', () => { btnLight.classList.add('active'); btnDark.classList.remove('active');  applyLight(true);  });
+  swatches.forEach(s => s.addEventListener('click', () => applyTheme(s.dataset.theme)));
 
   /* ══════════════════════════════════════════════════════════════════
      QUALITY PILLS (float drawer)
@@ -1004,9 +1060,9 @@
      INIT — restore persisted state
   ══════════════════════════════════════════════════════════════════ */
   (function init() {
-    const savedLight = localStorage.getItem('glorb-light') === '1';
+    const savedTheme = localStorage.getItem('glorb-theme') || 'dark';
     const savedZoom  = parseInt(localStorage.getItem('glorb-zoom') || '100', 10);
-    if (savedLight) { btnLight.classList.add('active'); btnDark.classList.remove('active'); applyLight(true); }
+    applyTheme(savedTheme);
     if (ZOOM_STEPS.includes(savedZoom) && savedZoom !== 100) applyZoom(savedZoom);
   })();
 </script>
