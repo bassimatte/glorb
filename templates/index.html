@@ -252,7 +252,39 @@
     }
     #viz-close:hover { border-color: var(--accent); color: var(--accent); }
 
-    /* ── Settings toggle ─────────────────────────────────────────── */
+    /* ── Mode pills (larger, primary) ───────────────────────────────*/
+    .mode-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mode-pill {
+      padding: 8px 20px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all .15s;
+      text-transform: uppercase;
+    }
+    .mode-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .mode-pill.active {
+      border-color: var(--accent);
+      color: var(--bg);
+      background: var(--accent);
+    }
+
+    /* Nature sub-variant pills */
+    #nature-variants {
+      display: none;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    #nature-variants.visible { display: flex; }
     #btn-settings {
       background: transparent;
       border: none;
@@ -296,6 +328,28 @@
     <div class="logo">GLORB</div>
     <div class="tagline">organic sound generator</div>
   </header>
+
+  <!-- Mode selector -->
+  <div class="controls" style="gap:16px;">
+    <div class="row">
+      <span class="label">Mode</span>
+      <div class="mode-pills" id="mode-pills">
+        <button class="mode-pill active" data-mode="glorb">Glorb</button>
+        <button class="mode-pill" data-mode="retro">Retro</button>
+        <button class="mode-pill" data-mode="nature">Nature</button>
+        <button class="mode-pill" data-mode="ui-pack">UI Pack</button>
+      </div>
+    </div>
+    <div class="row" id="nature-row" style="display:none">
+      <span class="label">Variant</span>
+      <div class="pills" id="nature-variants">
+        <button class="pill active" data-variant="random">Random</button>
+        <button class="pill" data-variant="rain">Rain</button>
+        <button class="pill" data-variant="fire">Fire</button>
+        <button class="pill" data-variant="insects">Insects</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Waveform -->
   <div class="waveform-wrap">
@@ -358,7 +412,9 @@
   let sourceNode  = null;
   let analyser    = null;
   let isPlaying   = false;
-  let selectedQ   = 'high';
+  let selectedQ       = 'high';
+  let selectedMode    = 'glorb';
+  let selectedVariant = 'random';
   let animId      = null;
   let vizAnimId   = null;
   let vizActive   = false;
@@ -382,6 +438,31 @@
   /* ── Duration slider ────────────────────────────────────────────── */
   sliderDur.addEventListener('input', () => {
     durVal.textContent = sliderDur.value + 's';
+  });
+
+  /* ── Mode pills ─────────────────────────────────────────────────── */
+  const modePills  = document.querySelectorAll('.mode-pill');
+  const natureRow  = document.getElementById('nature-row');
+  const natPills   = document.querySelectorAll('#nature-variants .pill');
+
+  modePills.forEach(p => {
+    p.addEventListener('click', () => {
+      modePills.forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      selectedMode = p.dataset.mode;
+      natureRow.style.display = selectedMode === 'nature' ? 'flex' : 'none';
+      // UI Pack: hide duration slider (it generates fixed set)
+      document.querySelector('.slider-wrap').parentElement.style.display =
+        selectedMode === 'ui-pack' ? 'none' : 'flex';
+    });
+  });
+
+  natPills.forEach(p => {
+    p.addEventListener('click', () => {
+      natPills.forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      selectedVariant = p.dataset.variant;
+    });
   });
 
   /* ── Settings toggle ────────────────────────────────────────────── */
@@ -517,9 +598,9 @@
   /* ── Download button ────────────────────────────────────────────── */
   btnDl.addEventListener('click', () => {
     if (!btnDl._wavBlob) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(btnDl._wavBlob);
-    a.download = `glorb_${Date.now()}.wav`;
+    const a   = document.createElement('a');
+    a.href    = URL.createObjectURL(btnDl._wavBlob);
+    a.download = btnDl._isZip ? `glorb_ui_pack_${Date.now()}.zip` : `glorb_${selectedMode}_${Date.now()}.wav`;
     a.click();
   });
 
@@ -532,24 +613,43 @@
     drawIdle();
 
     try {
+      const body = {
+        duration: +sliderDur.value,
+        quality: selectedQ,
+        mode: selectedMode,
+      };
+      if (selectedMode === 'nature' && selectedVariant !== 'random')
+        body.variant = selectedVariant;
+
       const res = await fetch('/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ duration: +sliderDur.value, quality: selectedQ }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
 
-      const arrayBuf = await res.arrayBuffer();
-      const wavBlob  = new Blob([arrayBuf], { type: 'audio/wav' });
+      const isZip = res.headers.get('content-type')?.includes('zip');
 
-      if (!audioCtx) audioCtx = new AudioContext();
-      audioBuffer = await audioCtx.decodeAudioData(arrayBuf.slice());
-
-      drawWaveform(audioBuffer, 1);
-      btnDl._wavBlob = wavBlob;
-
-      btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'inline-block';
-      setStatus(`ready — ${audioBuffer.duration.toFixed(1)}s · ${audioBuffer.sampleRate/1000}kHz · stereo`);
+      if (isZip) {
+        // UI Pack: just offer download, no playback
+        const blob = await res.blob();
+        btnDl._wavBlob  = blob;
+        btnDl._isZip    = true;
+        btnDl.style.display = 'inline-block';
+        audioBuffer = null;
+        drawIdle();
+        setStatus('ui pack ready — 7 sounds · download to unzip');
+      } else {
+        const arrayBuf = await res.arrayBuffer();
+        const wavBlob  = new Blob([arrayBuf], { type: 'audio/wav' });
+        if (!audioCtx) audioCtx = new AudioContext();
+        audioBuffer = await audioCtx.decodeAudioData(arrayBuf.slice());
+        drawWaveform(audioBuffer, 1);
+        btnDl._wavBlob = wavBlob;
+        btnDl._isZip   = false;
+        btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'inline-block';
+        setStatus(`ready — ${audioBuffer.duration.toFixed(1)}s · ${audioBuffer.sampleRate/1000}kHz · stereo`);
+      }
     } catch (err) {
       setStatus(err.message, 'error');
     } finally {
