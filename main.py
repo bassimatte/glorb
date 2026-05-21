@@ -16,7 +16,10 @@ Usage:
 
 import argparse
 import numpy as np
-import sounddevice as sd
+try:
+    import sounddevice as sd
+except ImportError:
+    sd = None   # not available on server (Render); playback disabled
 import soundfile as sf
 import random
 from scipy.ndimage import maximum_filter1d
@@ -331,9 +334,12 @@ def make_sequence(target_duration=10.0, output_file="blipblop.wav", play=False, 
     print(f"\n💾 Saved {target_duration:.1f}s to '{output_file}'  [{quality_label}, normalized to -0.1 dBFS]")
 
     if play:
-        print("▶  Playing...")
-        sd.play(audio, SAMPLE_RATE)
-        sd.wait()
+        if sd is None:
+            print("⚠  sounddevice not available — skipping playback.")
+        else:
+            print("▶  Playing...")
+            sd.play(audio, SAMPLE_RATE)
+            sd.wait()
 
     print("✅ Done!")
 
