@@ -302,31 +302,6 @@
       flex-wrap: wrap;
     }
     #nature-variants.visible { display: flex; }
-    #btn-settings {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      font-family: var(--font);
-      font-size: 11px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      cursor: pointer;
-      padding: 0;
-      transition: color .15s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    #btn-settings:hover { color: var(--text); }
-    #btn-settings .chevron { transition: transform .2s; display: inline-block; }
-    #btn-settings.open .chevron { transform: rotate(180deg); }
-
-    #settings-panel {
-      display: none;
-      padding: 16px 0 4px;
-      border-top: 1px solid var(--border);
-    }
-    #settings-panel.open { display: block; }
     #status {
       font-size: 11px;
       color: var(--muted);
@@ -636,25 +611,6 @@
       <button id="btn-play">▶ Play</button>
       <button id="btn-viz">⬡ Visualize</button>
       <button id="btn-download">↓ Save</button>
-    </div>
-
-    <!-- Settings toggle (glorb UI only) -->
-    <div>
-      <button id="btn-settings">
-        <span>⚙ settings</span>
-        <span class="chevron">▾</span>
-      </button>
-      <div id="settings-panel">
-        <div class="row">
-          <span class="label">Quality</span>
-          <div class="pills" id="quality-pills">
-            <button class="pill" data-q="standard">Standard</button>
-            <button class="pill active" data-q="high">High</button>
-            <button class="pill" data-q="studio">Studio</button>
-            <button class="pill" data-q="float">Float</button>
-          </div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -1065,12 +1021,6 @@
       natPills.forEach(x => x.classList.remove('active'));
       p.classList.add('active'); selectedVariant = p.dataset.variant;
     });
-  });
-
-  const btnSettings   = document.getElementById('btn-settings');
-  const settingsPanel = document.getElementById('settings-panel');
-  btnSettings.addEventListener('click', () => {
-    btnSettings.classList.toggle('open'); settingsPanel.classList.toggle('open');
   });
 
   function setStatus(msg, cls='') { statusEl.textContent = msg; statusEl.className = cls; }
