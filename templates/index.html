@@ -898,6 +898,32 @@
   const DOT_RADIUS  = 1.5;   // base dot radius
   let   _dotGrid    = [];    // pre-computed grid positions, rebuilt on resize
 
+  // Particles state
+  let _particles = [];
+  function _initParticles(W, H) {
+    _particles = Array.from({length: 90}, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 2 + 1, ba: Math.random() * 0.07 + 0.03
+    }));
+  }
+
+  // Rings state
+  let _rings = [];
+  let _ringTimer = 0;
+
+  // Matrix state
+  let _matrixCols = [];
+  function _initMatrix(W, H) {
+    const sp = 20;
+    _matrixCols = Array.from({length: Math.ceil(W / sp)}, (_, i) => ({
+      x: i * sp + sp / 2,
+      y: Math.random() * H,
+      speed: Math.random() * 1.4 + 0.5,
+      trail: Math.floor(Math.random() * 8) + 4
+    }));
+  }
+
   function _buildDotGrid(W, H) {
     _dotGrid = [];
     const cols = Math.ceil(W / DOT_SPACING) + 1;
