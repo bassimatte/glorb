@@ -343,7 +343,8 @@
     .ui-view { display: none; min-height: 100vh; width: 100%; }
     .ui-view.active { display: flex; align-items: center; justify-content: center; background: var(--bg); }
 
-    #ui-glorb.active { align-items: stretch; justify-content: stretch; }
+    #ui-glorb.active { align-items: stretch; justify-content: flex-start; flex-direction: column; }
+    #ui-glorb .shell { width: 100%; }
 
     /* ── Floating gear ───────────────────────────────────────────── */
     #float-gear {
