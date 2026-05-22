@@ -73,7 +73,7 @@ python server.py
 
 Open **http://localhost:5000**
 
-Features: 6 colour themes, live waveform, 7 audio-reactive background visualisers (Dots, Wave, Particles, Rings, Matrix, Blobs, None), loop playback, WAV download.
+Features: 6 colour themes, live waveform, 7 audio-reactive background visualisers (Dots, Wave, Particles, Rings, Matrix, Blobs, None), loop playback, WAV download, shareable URL (🔗 button encodes mode + knobs + settings into the link).
 
 ---
 
