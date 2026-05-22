@@ -8,7 +8,7 @@
 
 ## What it does
 
-Glorb generates electronic sounds with an organic, analog feel across **17 sound worlds**:
+Glorb generates electronic sounds with an organic, analog feel across **21 sound worlds**:
 
 | Mode | Description |
 |---|---|
@@ -18,6 +18,7 @@ Glorb generates electronic sounds with an organic, analog feel across **17 sound
 | **Sci-Fi** | Phasers, warp drives, laser bursts |
 | **Haptic** | Tactile vibration pulses and clicks |
 | **Radio** | AM/FM static, morse, transmission artefacts |
+| **UI Pack** | Notification pings, confirm tones, interface clicks |
 | **Foley** | Footsteps, paper, keys, everyday impacts |
 | **Underwater** | Sonar pings, bubble trains, deep pressure tones |
 | **Weather** | Thunder, lightning crackle, rain layers |
@@ -28,6 +29,10 @@ Glorb generates electronic sounds with an organic, analog feel across **17 sound
 | **Horror** | Dissonant drones, breath, reversed tails |
 | **Granular** | Scattered grain clouds across noise and pitch |
 | **Lo-Fi** | Vinyl crackle, tape wow/flutter, telephone bandwidth |
+| **Modem** | DTMF tones, FSK handshake, connect screech |
+| **Insects** | Crickets, cicadas, grasshoppers, water bugs |
+| **Gamelan** | Inharmonic metal bars, detuned pairs, gong resonance |
+| **Arp** | Generative arpeggiator across minor, major, pentatonic, and modal scales |
 
 ---
 
@@ -68,7 +73,7 @@ python server.py
 
 Open **http://localhost:5000**
 
-Features: 6 colour themes, live waveform, audio-reactive dot-grid background, loop playback, WAV download.
+Features: 6 colour themes, live waveform, 7 audio-reactive background visualisers (Dots, Wave, Particles, Rings, Matrix, Blobs, None), loop playback, WAV download.
 
 ---
 
