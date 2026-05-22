@@ -698,6 +698,18 @@
       <button class="pill" data-q="float">Float</button>
     </div>
   </div>
+  <div class="dr">
+    <span class="dr-label">Background</span>
+    <div class="pills" id="bg-pills">
+      <button class="pill active" data-bg="dots">Dots</button>
+      <button class="pill"        data-bg="wave">Wave</button>
+      <button class="pill"        data-bg="particles">Particles</button>
+      <button class="pill"        data-bg="rings">Rings</button>
+      <button class="pill"        data-bg="matrix">Matrix</button>
+      <button class="pill"        data-bg="blobs">Blobs</button>
+      <button class="pill"        data-bg="none">None</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Visualizer overlay ─────────────────────────────────────────── -->
@@ -1056,6 +1068,36 @@
           }
           col.y += col.speed * (1 + vol * 2.2);
           if (col.y > H + col.trail * 16) col.y = -col.trail * 16;
+        });
+      }
+
+      // ── Blobs ─────────────────────────────────────────────────────
+      else if (bgStyle === 'blobs') {
+        bgCtx.fillStyle = 'rgba(0,0,0,0.18)';
+        bgCtx.fillRect(0, 0, W, H);
+        const blobDefs = [
+          { rx: 0.35, ry: 0.42, baseR: 0.38, hueOff: 0,   freqBand: [0,  80]  },
+          { rx: 0.65, ry: 0.55, baseR: 0.30, hueOff: 120, freqBand: [80, 160] },
+          { rx: 0.50, ry: 0.28, baseR: 0.22, hueOff: 240, freqBand: [160,255] },
+        ];
+        const freqData = analyser ? (() => {
+          const d = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d); return d;
+        })() : new Uint8Array(256);
+        blobDefs.forEach(b => {
+          const bandVol = freqData.slice(b.freqBand[0], b.freqBand[1])
+                            .reduce((s, v) => s + v, 0) / (b.freqBand[1] - b.freqBand[0]) / 255;
+          const hue = (bgTime * 0.15 + b.hueOff) % 360;
+          const radius = Math.min(W, H) * (b.baseR + bandVol * 0.10);
+          const cx = W * b.rx + Math.sin(bgTime * 0.008 + b.hueOff) * W * 0.04;
+          const cy = H * b.ry + Math.cos(bgTime * 0.006 + b.hueOff) * H * 0.04;
+          const grad = bgCtx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+          grad.addColorStop(0,   `hsla(${hue},100%,60%,${0.18 + bandVol * 0.22})`);
+          grad.addColorStop(0.5, `hsla(${hue},80%,40%,${0.08 + bandVol * 0.10})`);
+          grad.addColorStop(1,   `hsla(${hue},60%,20%,0)`);
+          bgCtx.beginPath();
+          bgCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+          bgCtx.fillStyle = grad;
+          bgCtx.fill();
         });
       }
     }
