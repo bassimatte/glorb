@@ -474,6 +474,12 @@
       font-size: 11px; color: var(--muted); letter-spacing: .12em;
       text-transform: uppercase; text-align: center;
     }
+    #info-box pre {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 10px 14px; font-size: 12px; color: var(--accent);
+      overflow-x: auto; white-space: pre; margin: 8px 0;
+      font-family: 'SF Mono','Fira Code',monospace;
+    }
     #info-close {
       position: absolute; top: 14px; right: 16px;
       background: none; border: none; color: var(--muted);
@@ -689,6 +695,17 @@
 
     <h3>Sharing</h3>
     <p>Click the <strong>🔗</strong> button to copy a shareable link. The URL encodes the current mode, knobs, duration, quality, theme, and background — so anyone opening it lands on the exact same configuration.</p>
+
+    <h3>Offline / Terminal</h3>
+    <p>Clone the repo and install dependencies, then run the local server:</p>
+<pre>pip install -r requirements-server.txt
+python server.py          # open http://localhost:5000</pre>
+    <p>Or generate WAV files directly from the terminal without the browser:</p>
+<pre>python main.py                        # 10 s glorb → blipblop.wav
+python main.py -d 30 -m retro         # 30 s retro
+python main.py --play                 # render &amp; play immediately</pre>
+    <p>Batch-render all 21 modes and export a Freesound upload sheet:</p>
+<pre>python generate.py --all --duration 60 --freesound</pre>
 
     <div class="info-credit">Created by <a href="https://freesound.org/people/bassimat/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Matteo Bassi</a></div>
   </div>
