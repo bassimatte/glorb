@@ -416,7 +416,7 @@
     .swatch.active { border-color: var(--fg); box-shadow: 0 0 0 1px var(--bg); }
 
     /* ── Floating gear + info ─────────────────────────────────────── */
-    #float-gear, #float-info {
+    #float-gear, #float-info, #float-share {
       position: fixed; bottom: 24px; z-index: 100;
       width: 38px; height: 38px; border-radius: 50%;
       background: var(--surface); border: 1px solid var(--border);
@@ -424,12 +424,21 @@
       display: flex; align-items: center; justify-content: center;
       transition: all .2s;
     }
-    #float-gear { right: 24px; }
+    #float-gear  { right: 24px; }
     #float-info  { right: 70px; font-size: 17px; font-weight: 700; font-style: italic; }
+    #float-share { right: 116px; font-size: 16px; }
     #float-gear:hover, #float-gear.open,
-    #float-info:hover,  #float-info.open {
-      color: var(--accent); border-color: var(--accent);
+    #float-info:hover,  #float-info.open,
+    #float-share:hover { color: var(--accent); border-color: var(--accent); }
+    /* ── Share toast ─────────────────────────────────────────────── */
+    #share-toast {
+      position: fixed; bottom: 72px; right: 116px; z-index: 200;
+      background: var(--accent); color: #000;
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      pointer-events: none; opacity: 0; transform: translateY(6px);
+      transition: opacity .2s, transform .2s;
     }
+    #share-toast.show { opacity: 1; transform: translateY(0); }
     /* ── Info modal ───────────────────────────────────────────────── */
     #info-modal {
       display: none; position: fixed; inset: 0; z-index: 200;
@@ -612,7 +621,9 @@
 
 <!-- ═══════════ FLOATING SETTINGS ═══════════ -->
 <button id="float-info">i</button>
+<button id="float-share">🔗</button>
 <button id="float-gear">⚙</button>
+<div id="share-toast">Link copied!</div>
 
 <!-- ═══════════ INFO MODAL ═══════════ -->
 <div id="info-modal">
@@ -789,6 +800,7 @@
     localStorage.setItem('glorb-theme', name);
     swatches.forEach(s => s.classList.toggle('active', s.dataset.theme === name));
     if (!audioBuffer) drawIdle(); else drawWaveform(audioBuffer, 1);
+    pushHash();
   }
   swatches.forEach(s => s.addEventListener('click', () => applyTheme(s.dataset.theme)));
 
@@ -802,8 +814,83 @@
     bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
     _rings = [];
     if (isPlaying || bgStyle !== 'none') startBgAnim();
+    pushHash();
   }
   bgPills.forEach(p => p.addEventListener('click', () => applyBgStyle(p.dataset.bg)));
+
+  /* ══════════════════════════════════════════════════════════════════
+     SHAREABLE URL  (#m=glorb&e=50&b=50&c=50&d=10&q=high&t=dark&bg=dots)
+  ══════════════════════════════════════════════════════════════════ */
+  function pushHash() {
+    const p = new URLSearchParams();
+    p.set('m',  selectedMode);
+    p.set('e',  knobEnergy);
+    p.set('b',  knobBright);
+    p.set('c',  knobChaos);
+    p.set('d',  selectedDur);
+    p.set('q',  selectedQ);
+    p.set('t',  root.getAttribute('data-theme') || 'dark');
+    p.set('bg', bgStyle);
+    if (selectedMode === 'nature' && selectedVariant !== 'random') p.set('v', selectedVariant);
+    history.replaceState(null, '', '#' + p.toString());
+  }
+
+  function readHash() {
+    const hash = location.hash.slice(1);
+    if (!hash) return;
+    const p = new URLSearchParams(hash);
+    if (p.has('t'))  applyTheme(p.get('t'));
+    if (p.has('bg')) applyBgStyle(p.get('bg'));
+    if (p.has('q')) {
+      selectedQ = p.get('q');
+      qualPills.forEach(x => x.classList.toggle('active', x.dataset.q === selectedQ));
+    }
+    if (p.has('e')) {
+      knobEnergy = +p.get('e');
+      knobEnergyEl.value = knobEnergy;
+      knobEnergyLbl.textContent = KNOB_LABELS(knobEnergy);
+    }
+    if (p.has('b')) {
+      knobBright = +p.get('b');
+      knobBrightEl.value = knobBright;
+      knobBrightLbl.textContent = KNOB_LABELS(knobBright);
+    }
+    if (p.has('c')) {
+      knobChaos = +p.get('c');
+      knobChaosEl.value = knobChaos;
+      knobChaosLbl.textContent = KNOB_LABELS(knobChaos);
+    }
+    if (p.has('d')) {
+      selectedDur = +p.get('d');
+      sliderDur.value = selectedDur;
+      const m = Math.floor(selectedDur/60), s = selectedDur%60;
+      durVal.textContent = m > 0 ? `${m}m${s > 0 ? s+'s' : ''}` : `${s}s`;
+    }
+    if (p.has('m')) {
+      const mode = p.get('m');
+      modePills.forEach(x => x.classList.toggle('active', x.dataset.mode === mode));
+      selectedMode = mode;
+      natureRow.style.display = mode === 'nature' ? 'flex' : 'none';
+      document.querySelector('.slider-wrap').parentElement.style.display = mode === 'ui-pack' ? 'none' : 'flex';
+      btnDl.textContent = mode === 'ui-pack' ? '↓ ZIP' : '↓ Save';
+    }
+    if (p.has('v') && selectedMode === 'nature') {
+      selectedVariant = p.get('v');
+      natPills.forEach(x => x.classList.toggle('active', x.dataset.variant === selectedVariant));
+    }
+  }
+
+  const floatShare = document.getElementById('float-share');
+  const shareToast = document.getElementById('share-toast');
+  let shareToastTimer = null;
+  floatShare.addEventListener('click', () => {
+    pushHash();
+    navigator.clipboard.writeText(location.href).then(() => {
+      clearTimeout(shareToastTimer);
+      shareToast.classList.add('show');
+      shareToastTimer = setTimeout(() => shareToast.classList.remove('show'), 2000);
+    });
+  });
 
   /* ══════════════════════════════════════════════════════════════════
      QUALITY PILLS (float drawer)
@@ -814,6 +901,7 @@
       qualPills.forEach(x => x.classList.remove('active'));
       p.classList.add('active');
       selectedQ = p.dataset.q;
+      pushHash();
     });
   });
 
@@ -1152,6 +1240,7 @@
     selectedDur = +sliderDur.value;
     const m = Math.floor(selectedDur / 60), s = selectedDur % 60;
     durVal.textContent = m > 0 ? `${m}m${s > 0 ? s + 's' : ''}` : `${s}s`;
+    pushHash();
   });
 
   /* ── Parameter knobs ─────────────────────────────────────────────── */
@@ -1189,16 +1278,19 @@
     knobEnergy = +knobEnergyEl.value;
     knobEnergyLbl.textContent = KNOB_LABELS(knobEnergy);
     schedulePreview();
+    pushHash();
   });
   knobBrightEl.addEventListener('input', () => {
     knobBright = +knobBrightEl.value;
     knobBrightLbl.textContent = KNOB_LABELS(knobBright);
     schedulePreview();
+    pushHash();
   });
   knobChaosEl.addEventListener('input', () => {
     knobChaos = +knobChaosEl.value;
     knobChaosLbl.textContent = KNOB_LABELS(knobChaos);
     schedulePreview();
+    pushHash();
   });
 
   const modePills = document.querySelectorAll('.mode-pill');
@@ -1213,6 +1305,7 @@
       natureRow.style.display = selectedMode === 'nature' ? 'flex' : 'none';
       document.querySelector('.slider-wrap').parentElement.style.display = selectedMode === 'ui-pack' ? 'none' : 'flex';
       btnDl.textContent = selectedMode === 'ui-pack' ? '↓ ZIP' : '↓ Save';
+      pushHash();
       btnGen.click();
     });
   });
@@ -1220,6 +1313,7 @@
     p.addEventListener('click', () => {
       natPills.forEach(x => x.classList.remove('active'));
       p.classList.add('active'); selectedVariant = p.dataset.variant;
+      pushHash();
     });
   });
 
@@ -1449,7 +1543,7 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
-     INIT — restore persisted state
+     INIT — restore persisted state, then URL hash (hash wins)
   ══════════════════════════════════════════════════════════════════ */
   (function init() {
     const savedTheme = localStorage.getItem('glorb-theme') || 'dark';
@@ -1457,9 +1551,10 @@
     const savedBg    = localStorage.getItem('glorb-bg')    || 'dots';
     applyTheme(savedTheme);
     if (ZOOM_STEPS.includes(savedZoom) && savedZoom !== 100) applyZoom(savedZoom);
-    // mark correct bg pill without restarting anim (not playing yet)
     bgPills.forEach(p => p.classList.toggle('active', p.dataset.bg === savedBg));
     bgStyle = savedBg;
+    // URL hash overrides localStorage — lets shared links fully restore state
+    readHash();
   })();
 </script>
 </body>
