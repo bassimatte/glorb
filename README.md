@@ -92,6 +92,50 @@ python main.py --play       # render and play immediately
 
 ---
 
+## Batch renderer (`generate.py`)
+
+Generate audio files for one, several, or all 21 modes — with optional Freesound bulk-upload XLSX:
+
+```bash
+# Single mode
+python generate.py --mode glorb
+
+# Multiple modes
+python generate.py --mode glorb retro insects modem
+
+# All modes, 60 s each, studio quality
+python generate.py --all --duration 60 --quality studio
+
+# All modes + generate Freesound bulk XLSX
+python generate.py --all --duration 120 --freesound
+
+# Regenerate XLSX only (no re-render)
+python generate.py --all --metadata-only --freesound
+
+# Custom knobs and reproducible seed
+python generate.py --all --energy 80 --brightness 30 --chaos 70 --seed 42
+```
+
+### Options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--mode MODE [...]` | — | Mode(s) to render |
+| `--all` | — | Render all 21 modes |
+| `--duration SECS` | 30 | Duration in seconds |
+| `--quality PRESET` | high | `standard` / `high` / `studio` / `float` |
+| `--energy 0-100` | 50 | Event density knob |
+| `--brightness 0-100` | 50 | Frequency balance knob |
+| `--chaos 0-100` | 50 | Saturation/wobble knob |
+| `--output-dir DIR` | `exports/glorb` | Output folder |
+| `--freesound` | off | Generate `freesound_bulk.xlsx` |
+| `--metadata-only` | off | XLSX only, skip rendering |
+| `--seed N` | random | Fix seed for reproducible output |
+
+Output files are named `Glorb_<mode>.wav`. The XLSX matches the [Freesound bulk describe](https://freesound.org/home/describe/) template.
+
+
+
 ## Installation
 
 ```bash
