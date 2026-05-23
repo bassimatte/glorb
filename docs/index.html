@@ -796,6 +796,7 @@ python main.py --play                 # render &amp; play immediately</pre>
   let bgStyle     = localStorage.getItem('glorb-bg') || 'dots';
   let pendingAudioBuffer = null;
   let isCrossfading = false;
+  let currentGainNode = null;
 
   const root        = document.documentElement;
   const vizOverlay  = document.getElementById('viz-overlay');
@@ -994,10 +995,14 @@ python main.py --play                 # render &amp; play immediately</pre>
     if (audioCtx.state === 'suspended') audioCtx.resume();
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.8;
+    analyser.connect(audioCtx.destination);
+    currentGainNode = audioCtx.createGain();
+    currentGainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+    currentGainNode.connect(analyser);
     sourceNode = audioCtx.createBufferSource();
     sourceNode.buffer = audioBuffer;
     sourceNode.loop = true;
-    sourceNode.connect(analyser); analyser.connect(audioCtx.destination);
+    sourceNode.connect(currentGainNode);
     const startedAt = audioCtx.currentTime;
     sourceNode.start(); isPlaying = true;
     startBgAnim();
@@ -1006,6 +1011,7 @@ python main.py --play                 # render &amp; play immediately</pre>
 
   function stopPlayback() {
     if (sourceNode) { try { sourceNode.stop(); } catch(_){} sourceNode = null; }
+    if (currentGainNode) { try { currentGainNode.disconnect(); } catch(_){} currentGainNode = null; }
     if (animId)     { cancelAnimationFrame(animId);    animId    = null; }
     if (vizAnimId)  { cancelAnimationFrame(vizAnimId); vizAnimId = null; }
     isPlaying = false;
@@ -1019,36 +1025,32 @@ python main.py --play                 # render &amp; play immediately</pre>
       audioBuffer = nextBuffer;
       return;
     }
-    // Fade out current, fade in next over 0.5s
     const fadeDuration = 0.5;
     const now = audioCtx.currentTime;
-    const oldGainNode = audioCtx.createGain();
+    const oldGainNode = currentGainNode;
     const newGainNode = audioCtx.createGain();
-    
-    // Disconnect old source from analyser
-    sourceNode.disconnect(analyser);
-    sourceNode.connect(oldGainNode);
-    oldGainNode.connect(analyser);
-    
-    // Set up new source
+
+    // Set up new source through new gain node
     const newSource = audioCtx.createBufferSource();
     newSource.buffer = nextBuffer;
     newSource.loop = true;
     newSource.connect(newGainNode);
     newGainNode.connect(analyser);
-    
+
     // Fade curves
     oldGainNode.gain.setValueAtTime(1, now);
     oldGainNode.gain.linearRampToValueAtTime(0, now + fadeDuration);
     newGainNode.gain.setValueAtTime(0, now);
     newGainNode.gain.linearRampToValueAtTime(1, now + fadeDuration);
-    
-    // Start new source and switch after fade
+
     newSource.start();
+    const oldSource = sourceNode;
+    sourceNode = newSource;
+    currentGainNode = newGainNode;
+
     setTimeout(() => {
-      try { sourceNode.stop(); } catch(_) {}
-      oldGainNode.disconnect();
-      sourceNode = newSource;
+      try { oldSource.stop(); } catch(_) {}
+      try { oldGainNode.disconnect(); } catch(_) {}
       audioBuffer = nextBuffer;
       isCrossfading = false;
       modePills.forEach(p => p.classList.toggle('active', p.dataset.mode === selectedMode));
