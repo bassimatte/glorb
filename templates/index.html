@@ -930,8 +930,8 @@ python main.py --play                 # render &amp; play immediately</pre>
   /* ══════════════════════════════════════════════════════════════════
      CORE AUDIO ENGINE
   ══════════════════════════════════════════════════════════════════ */
-  async function coreGenerate(duration, onProgress, onDone, onError) {
-    stopPlayback();
+  async function coreGenerate(duration, onProgress, onDone, onError, skipStop = false) {
+    if (!skipStop) stopPlayback();
     try {
       const body = { duration, quality: selectedQ, mode: selectedMode,
                      energy: knobEnergy, brightness: knobBright, chaos: knobChaos };
@@ -1379,7 +1379,8 @@ python main.py --play                 # render &amp; play immediately</pre>
             crossfadeTo(buf);
             setStatus(`ready — crossfaded to ${selectedMode}`, 'active');
           },
-          (err) => { isCrossfading = false; setStatus('error: ' + err, 'error'); }
+          (err) => { isCrossfading = false; setStatus('error: ' + err, 'error'); },
+          true  // skipStop = true, don't stop playback
         );
       } else {
         btnGen.click();
