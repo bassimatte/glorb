@@ -782,6 +782,13 @@ python main.py --play                 # render &amp; play immediately</pre>
       <button class="pill"        data-bg="none">None</button>
     </div>
   </div>
+  <div class="dr" style="justify-content:space-between;">
+    <span class="dr-label">Code</span>
+    <a id="app-version-link" href="https://github.com/bassimatte/glorb"
+       target="_blank" rel="noopener"
+       style="font-size:10px; color:var(--muted); text-decoration:none;
+              font-family:monospace; letter-spacing:0.05em;">…</a>
+  </div>
 </div>
 
 <!-- ── Visualizer overlay ─────────────────────────────────────────── -->
@@ -1690,6 +1697,24 @@ python main.py --play                 # render &amp; play immediately</pre>
             .catch(() => {});
         }, 3000);
       });
+  })();
+
+  // Fetch latest commit SHA from GitHub and populate the Code version link
+  (async () => {
+    const REPO = 'bassimatte/glorb';
+    const BASE = 'https://github.com/' + REPO;
+    try {
+      const r = await fetch(`https://api.github.com/repos/${REPO}/commits/main?per_page=1`);
+      const d = await r.json();
+      if (d && d.sha) {
+        const el = document.getElementById('app-version-link');
+        if (el) {
+          el.textContent = d.sha.slice(0, 7);
+          el.href = `${BASE}/commit/${d.sha}`;
+          el.title = `GitHub commit ${d.sha.slice(0, 7)}`;
+        }
+      }
+    } catch (_) {}
   })();
 
 </script>
