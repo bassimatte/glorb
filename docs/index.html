@@ -602,7 +602,7 @@
     <div class="row">
       <span class="label">Duration <span style="font-size:10px;opacity:0.5">(max 2 min online)</span></span>
       <div class="slider-wrap">
-        <input type="range" id="slider-dur" min="1" max="120" step="1" value="10" />
+        <input type="range" id="slider-dur" min="1" max="120" step="1" value="5" />
         <span class="duration-val" id="dur-val">10s</span>
       </div>
     </div>
@@ -786,14 +786,14 @@ python main.py --play                 # render &amp; play immediately</pre>
   let selectedQ       = 'high';
   let selectedMode    = 'glorb';
   let selectedVariant = 'random';
-  let selectedDur     = 10;
+  let selectedDur     = 5;
   let knobEnergy  = 50;   // 0–100
   let knobBright  = 50;   // 0–100
   let knobChaos   = 50;   // 0–100
   let animId      = null;
   let vizAnimId   = null;
   let vizActive   = false;
-  let bgStyle     = localStorage.getItem('glorb-bg') || 'dots';
+  let bgStyle     = localStorage.getItem('glorb-bg') || 'particles';
   let pendingAudioBuffer = null;
   let isCrossfading = false;
   let currentGainNode = null;
@@ -1645,7 +1645,7 @@ python main.py --play                 # render &amp; play immediately</pre>
   (function init() {
     const savedTheme = localStorage.getItem('glorb-theme') || 'dark';
     const savedZoom  = parseInt(localStorage.getItem('glorb-zoom') || '100', 10);
-    const savedBg    = localStorage.getItem('glorb-bg')    || 'dots';
+    const savedBg    = localStorage.getItem('glorb-bg')    || 'particles';
     applyTheme(savedTheme);
     if (ZOOM_STEPS.includes(savedZoom) && savedZoom !== 100) applyZoom(savedZoom);
     bgPills.forEach(p => p.classList.toggle('active', p.dataset.bg === savedBg));
