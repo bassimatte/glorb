@@ -3,6 +3,7 @@ server.py — Flask web server for Glorb.
 Serves the UI and exposes /generate (WAV or ZIP) and /nature-variants endpoints.
 """
 
+import gc
 import io
 import zipfile
 import sys
@@ -23,8 +24,7 @@ CORS(app)  # allow GitHub Pages to call Render backend
 _DITHER_BITS = {"PCM_16": 16, "PCM_24": 24, "PCM_32": 32}
 
 def _apply_tpdf_dither(audio, subtype):
-    """TPDF dither: add triangular noise of amplitude 1 LSB before quantisation.
-    Converts deterministic quantisation distortion into inaudible white noise.
+    """TPDF dither in-place: triangular noise of amplitude 1 LSB before quantisation.
     No-op for floating-point subtypes.
     """
     bits = _DITHER_BITS.get(subtype)
@@ -33,20 +33,24 @@ def _apply_tpdf_dither(audio, subtype):
     lsb = 2.0 / (2 ** bits)
     r1 = np.random.uniform(-0.5, 0.5, audio.shape).astype(np.float32)
     r2 = np.random.uniform(-0.5, 0.5, audio.shape).astype(np.float32)
-    return audio + (r1 + r2) * lsb   # triangular PDF, peak amplitude = 1 LSB
+    np.add(r1, r2, out=r1)
+    np.multiply(r1, lsb, out=r1)
+    np.add(audio, r1, out=audio)
+    del r1, r2
+    return audio
 
 
 def _normalize(audio):
-    """Peak-normalize to -0.1 dBFS (0.9886 linear)."""
+    """Peak-normalize to -0.1 dBFS in-place (0.9886 linear)."""
     peak = np.max(np.abs(audio))
     if peak > 0:
-        audio = audio / peak * 0.9886
-    return audio.astype(np.float32)
+        np.multiply(audio, 0.9886 / peak, out=audio)
+    return audio
 
 
 def _wav_bytes(audio, sample_rate, subtype):
-    audio = _normalize(audio)
-    audio = _apply_tpdf_dither(audio, subtype)
+    _normalize(audio)
+    _apply_tpdf_dither(audio, subtype)
     buf = io.BytesIO()
     sf.write(buf, audio, sample_rate, subtype=subtype, format="WAV")
     buf.seek(0)
@@ -87,6 +91,14 @@ def generate():
     sample_rate, subtype, _ = bb.QUALITY_PRESETS[quality]
     bb.SAMPLE_RATE = sample_rate
 
+    def _finish(audio, name):
+        """Encode audio to WAV bytes, then immediately free the numpy array."""
+        buf = _wav_bytes(audio, sample_rate, subtype)
+        del audio
+        gc.collect()
+        return send_file(buf, mimetype="audio/wav",
+                         as_attachment=False, download_name=name)
+
     # ── UI Pack → concatenated WAV for playback ───────────────────
     if mode == "ui-pack":
         sounds = bb.make_ui_pack()
@@ -95,138 +107,45 @@ def generate():
         for audio in sounds.values():
             peak = np.max(np.abs(audio))
             if peak > 0:
-                audio = audio / peak * 0.9886
+                np.multiply(audio, 0.9886 / peak, out=audio)
             parts.append(audio)
             parts.append(silence_gap)
-        combined = np.concatenate(parts[:-1])  # drop trailing gap
-        buf = _wav_bytes(combined, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_ui_pack_preview.wav")
+        combined = np.concatenate(parts[:-1])
+        del parts, sounds, silence_gap
+        gc.collect()
+        return _finish(combined, "glorb_ui_pack_preview.wav")
 
-    # ── Nature → single WAV ───────────────────────────────────────
-    if mode == "nature":
-        audio, used_variant = bb.make_nature_sequence(duration, variant)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False,
-                         download_name=f"glorb_nature_{used_variant}.wav")
+    # ── Dispatch all other modes ──────────────────────────────────
+    _MODE_FN = {
+        "nature":    lambda: bb.make_nature_sequence(duration, variant)[0],
+        "scifi":     lambda: bb.make_scifi_sequence(duration),
+        "haptic":    lambda: bb.make_haptic_sequence(duration),
+        "radio":     lambda: bb.make_radio_sequence(duration),
+        "retro":     lambda: bb.make_retro_sequence(duration),
+        "foley":     lambda: bb.make_foley_sequence(duration),
+        "underwater":lambda: bb.make_underwater_sequence(duration),
+        "weather":   lambda: bb.make_weather_sequence(duration),
+        "bell":      lambda: bb.make_bell_sequence(duration),
+        "bass":      lambda: bb.make_bass_sequence(duration),
+        "glitch":    lambda: bb.make_glitch_sequence(duration),
+        "pinball":   lambda: bb.make_pinball_sequence(duration),
+        "horror":    lambda: bb.make_horror_sequence(duration),
+        "granular":  lambda: bb.make_granular_sequence(duration),
+        "lofi":      lambda: bb.make_lofi_sequence(duration),
+        "modem":     lambda: bb.make_modem_sequence(duration),
+        "insects":   lambda: bb.make_insects_sequence(duration),
+        "gamelan":   lambda: bb.make_gamelan_sequence(duration),
+        "arp":       lambda: bb.make_arp_sequence(duration),
+    }
 
-    # ── Sci-Fi → single WAV ───────────────────────────────────────
-    if mode == "scifi":
-        audio = bb.make_scifi_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_scifi.wav")
+    if mode in _MODE_FN:
+        audio = _MODE_FN[mode]()
+        return _finish(audio, f"glorb_{mode}.wav")
 
-    # ── Haptic → single WAV ───────────────────────────────────────
-    if mode == "haptic":
-        audio = bb.make_haptic_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_haptic.wav")
-
-    # ── Radio → single WAV ────────────────────────────────────────
-    if mode == "radio":
-        audio = bb.make_radio_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_radio.wav")
-
-    # ── Retro → single WAV ────────────────────────────────────────
-    if mode == "retro":
-        audio = bb.make_retro_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_retro.wav")
-
-    if mode == "foley":
-        audio = bb.make_foley_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_foley.wav")
-
-    if mode == "underwater":
-        audio = bb.make_underwater_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_underwater.wav")
-
-    if mode == "weather":
-        audio = bb.make_weather_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_weather.wav")
-
-    if mode == "bell":
-        audio = bb.make_bell_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_bell.wav")
-
-    if mode == "bass":
-        audio = bb.make_bass_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_bass.wav")
-
-    if mode == "glitch":
-        audio = bb.make_glitch_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_glitch.wav")
-
-    if mode == "pinball":
-        audio = bb.make_pinball_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_pinball.wav")
-
-    if mode == "horror":
-        audio = bb.make_horror_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_horror.wav")
-
-    if mode == "granular":
-        audio = bb.make_granular_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_granular.wav")
-
-    if mode == "lofi":
-        audio = bb.make_lofi_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_lofi.wav")
-
-    if mode == "modem":
-        audio = bb.make_modem_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_modem.wav")
-
-    if mode == "insects":
-        audio = bb.make_insects_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_insects.wav")
-
-    if mode == "gamelan":
-        audio = bb.make_gamelan_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_gamelan.wav")
-
-    if mode == "arp":
-        audio = bb.make_arp_sequence(duration)
-        buf = _wav_bytes(audio, sample_rate, subtype)
-        return send_file(buf, mimetype="audio/wav",
-                         as_attachment=False, download_name="glorb_arp.wav")
-
-    # ── Glorb (default) → single WAV ─────────────────────────────
+    # ── Glorb (default) ───────────────────────────────────────────
     import random
     parts, total = [], 0.0
-    gap_lo = bb._knob(bb.KNOB_ENERGY, 0.22, 0.003)   # high energy → tiny gaps
+    gap_lo = bb._knob(bb.KNOB_ENERGY, 0.22, 0.003)
     gap_hi = bb._knob(bb.KNOB_ENERGY, 0.80, 0.06)
     while total < duration:
         signal, _style, _freq = bb.make_blip()
@@ -236,9 +155,9 @@ def generate():
         total += len(signal) / bb.SAMPLE_RATE + gap
 
     audio = bb._finalise(np.concatenate(parts), duration)
-    buf = _wav_bytes(audio, sample_rate, subtype)
-    return send_file(buf, mimetype="audio/wav",
-                     as_attachment=False, download_name="glorb.wav")
+    del parts
+    gc.collect()
+    return _finish(audio, "glorb.wav")
 
 
 @app.route("/ui-pack-zip")
@@ -256,9 +175,11 @@ def ui_pack_zip():
         for name, audio in sounds.items():
             peak = np.max(np.abs(audio))
             if peak > 0:
-                audio = audio / peak * 0.9886
+                np.multiply(audio, 0.9886 / peak, out=audio)
             wav = _wav_bytes(audio, sample_rate, subtype)
             zf.writestr(f"{name}.wav", wav.read())
+    del sounds
+    gc.collect()
     zip_buf.seek(0)
     return send_file(zip_buf, mimetype="application/zip",
                      as_attachment=False, download_name="glorb_ui_pack.zip")
