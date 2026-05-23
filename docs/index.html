@@ -794,6 +794,8 @@ python main.py --play                 # render &amp; play immediately</pre>
   let vizAnimId   = null;
   let vizActive   = false;
   let bgStyle     = localStorage.getItem('glorb-bg') || 'dots';
+  let pendingAudioBuffer = null;
+  let isCrossfading = false;
 
   const root        = document.documentElement;
   const vizOverlay  = document.getElementById('viz-overlay');
@@ -1010,6 +1012,47 @@ python main.py --play                 # render &amp; play immediately</pre>
     updateAllPlayButtons();
     if (audioBuffer) drawWaveform(audioBuffer, 1);
     stopBgAnim();
+  }
+
+  function crossfadeTo(nextBuffer) {
+    if (!isPlaying || !sourceNode) {
+      audioBuffer = nextBuffer;
+      return;
+    }
+    // Fade out current, fade in next over 0.5s
+    const fadeDuration = 0.5;
+    const now = audioCtx.currentTime;
+    const oldGainNode = audioCtx.createGain();
+    const newGainNode = audioCtx.createGain();
+    
+    // Disconnect old source from analyser
+    sourceNode.disconnect(analyser);
+    sourceNode.connect(oldGainNode);
+    oldGainNode.connect(analyser);
+    
+    // Set up new source
+    const newSource = audioCtx.createBufferSource();
+    newSource.buffer = nextBuffer;
+    newSource.loop = true;
+    newSource.connect(newGainNode);
+    newGainNode.connect(analyser);
+    
+    // Fade curves
+    oldGainNode.gain.setValueAtTime(1, now);
+    oldGainNode.gain.linearRampToValueAtTime(0, now + fadeDuration);
+    newGainNode.gain.setValueAtTime(0, now);
+    newGainNode.gain.linearRampToValueAtTime(1, now + fadeDuration);
+    
+    // Start new source and switch after fade
+    newSource.start();
+    setTimeout(() => {
+      try { sourceNode.stop(); } catch(_) {}
+      oldGainNode.disconnect();
+      sourceNode = newSource;
+      audioBuffer = nextBuffer;
+      isCrossfading = false;
+      modePills.forEach(p => p.classList.toggle('active', p.dataset.mode === selectedMode));
+    }, fadeDuration * 1000);
   }
 
   function updateAllPlayButtons() {
@@ -1337,13 +1380,27 @@ python main.py --play                 # render &amp; play immediately</pre>
   modePills.forEach(p => {
     p.addEventListener('click', () => {
       modePills.forEach(x => x.classList.remove('active'));
-      p.classList.add('active');
       selectedMode = p.dataset.mode;
       natureRow.style.display = selectedMode === 'nature' ? 'flex' : 'none';
       document.querySelector('.slider-wrap').parentElement.style.display = selectedMode === 'ui-pack' ? 'none' : 'flex';
       btnDl.textContent = selectedMode === 'ui-pack' ? '↓ ZIP' : '↓ Save';
       pushHash();
-      btnGen.click();
+      
+      // If playing, queue seamless crossfade; else just generate
+      if (isPlaying && !isCrossfading) {
+        isCrossfading = true;
+        setStatus('generating next…', 'active');
+        coreGenerate(+sliderDur.value,
+          null,
+          (buf) => {
+            crossfadeTo(buf);
+            setStatus(`ready — crossfaded to ${selectedMode}`, 'active');
+          },
+          (err) => { isCrossfading = false; setStatus('error: ' + err, 'error'); }
+        );
+      } else {
+        btnGen.click();
+      }
     });
   });
   natPills.forEach(p => {
