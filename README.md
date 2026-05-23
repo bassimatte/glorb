@@ -139,7 +139,13 @@ python generate.py --all --energy 80 --brightness 30 --chaos 70 --seed 42
 
 Output files are named `Glorb_<mode>.wav`. The XLSX matches the [Freesound bulk describe](https://freesound.org/home/describe/) template.
 
+---
 
+## Screenshots
+
+![Glorb UI with yellow particles background](screenshots/main%20ui%20-%20yellow%20particles.png)
+
+---
 
 ## Installation
 
