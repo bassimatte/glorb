@@ -1,14 +1,34 @@
 # GLORB
 
-**Organic sound generator** by Matteo Bassi. Synthesizes random sequences of blips, blops, zaps, clicks and bloops — each one unique, each one alive.
+**Generative Sound Synthesiser** by Matteo Bassi. Every render is unique — no samples, no loops, pure mathematics.
 
 🌐 **Live:** https://bassimatte.github.io/glorb/
 
 ---
 
-## What it does
+## What you hear
 
-Glorb generates electronic sounds with an organic, analog feel across **21 sound worlds**:
+Glorb generates electronic sounds with an organic, analog feel across **21 sound worlds**. Depending on the mode, you'll hear:
+
+- **abstract blips and blops** that chirp, sweep and pop like a living circuit board
+- **8-bit chiptune melodies** — square waves stepping through arpeggios with a crisp retro bite
+- **rain, fire and insects** — procedural ambient textures that breathe and shift
+- **sci-fi effects** — laser shots, warp drives, energy shields and matter transporters
+- **deep bass hits** — 808 kicks with falling pitch, subsonic thuds and growling harmonics
+- **metallic bells** — tubular bells, marimbas, singing bowls and Balinese gamelan gongs
+- **lo-fi nostalgia** — vinyl crackle, cassette hiss, tape dropout and power-line buzz
+- **dial-up modem** screech — DTMF tones, FSK handshakes, the full connect sequence
+- **generative arpeggios** stepping through minor, pentatonic and modal scales
+- **digital glitch** — bit-crushed aliasing, grain stutter, buffer freeze and DC spikes
+- **horror textures** — tremolo drones, eerie sweeps, ghost whispers and jump scares
+- **underwater soundscapes** — sonar pings, bubble streams and hydrophone hiss
+- **foley and haptics** — footsteps, paper rustle, clicks, taps and motor rumble
+
+Three knobs — **⚡ Energy**, **☀ Brightness** and **🌀 Chaos** — shape the density, tone and texture of every render in real time.
+
+---
+
+## Sound worlds
 
 | Mode | Description |
 |---|---|
