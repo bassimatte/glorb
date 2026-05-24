@@ -1000,6 +1000,9 @@ python main.py --play                 # render &amp; play immediately</pre>
     if (!audioBuffer) return null;
     if (!audioCtx) audioCtx = new AudioContext();
     if (audioCtx.state === 'suspended') audioCtx.resume();
+    // Always stop any previous source before starting a new one
+    if (sourceNode) { try { sourceNode.stop(); } catch(_){} sourceNode = null; }
+    if (currentGainNode) { try { currentGainNode.disconnect(); } catch(_){} currentGainNode = null; }
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.8;
     analyser.connect(audioCtx.destination);
