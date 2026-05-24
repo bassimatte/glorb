@@ -1040,6 +1040,8 @@ python main.py --play                 # render &amp; play immediately</pre>
   }
 
   function stopPlayback() {
+    clearTimeout(previewTimer);  // cancel any pending knob preview
+    previewGenId++;              // invalidate any in-flight preview generation
     if (sourceNode) { try { sourceNode.stop(); } catch(_){} sourceNode = null; }
     if (currentGainNode) { try { currentGainNode.disconnect(); } catch(_){} currentGainNode = null; }
     if (animId)     { cancelAnimationFrame(animId);    animId    = null; }
@@ -1366,22 +1368,27 @@ python main.py --play                 # render &amp; play immediately</pre>
   const KNOB_LABELS = v => v < 20 ? 'Min' : v < 40 ? 'Low' : v < 60 ? 'Mid' : v < 80 ? 'High' : 'Max';
 
   let previewTimer = null;
+  let previewGenId = 0;  // incremented on cancel; in-flight callbacks check this
+
   function schedulePreview() {
     clearTimeout(previewTimer);
     previewTimer = setTimeout(async () => {
       if (btnGen.disabled) return;
+      const myId = ++previewGenId;
       btnGen.classList.add('previewing');
       setStatus('preview…', 'active');
       await coreGenerate(3,
         null,
         (buf) => {
+          if (previewGenId !== myId) return; // stop was clicked — discard result
           btnGen.classList.remove('previewing');
           const startedAt = startAudio();
           startProgressLoop(startedAt);
           updateAllPlayButtons();
           setStatus('preview — hit Generate for full clip', 'active');
         },
-        (err) => { btnGen.classList.remove('previewing'); setStatus('error: ' + err, 'error'); }
+        (err) => { btnGen.classList.remove('previewing'); setStatus('error: ' + err, 'error'); },
+        true  // skipStop: keep main playback running while preview generates
       );
     }, 600);  // 600ms debounce
   }
