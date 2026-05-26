@@ -2126,6 +2126,9 @@ def _insect_cricket():
         parts.append(np.zeros(int(random.uniform(0.003, 0.012) * SAMPLE_RATE)))
     s = np.concatenate(parts); del parts
     return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
+
+
+def _insect_cicada():
     """Cicada buzz: AM-modulated band noise, rapid wing-beat amplitude."""
     dur = random.uniform(0.15, 0.55)
     n = int(dur * SAMPLE_RATE)
