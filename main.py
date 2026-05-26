@@ -1570,7 +1570,7 @@ def _glitch_stutter():
     return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
 
 
-
+def _glitch_corrupt():
     """Noise with spikes, dropouts, and DC offsets."""
     dur = random.uniform(0.03, 0.12)
     n = int(dur * SAMPLE_RATE)
