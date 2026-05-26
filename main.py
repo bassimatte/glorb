@@ -174,15 +174,21 @@ def apply_echo(signal, delay=0.08, feedback=0.4):
 def pitch_wobble(signal, rate_hz=6.0, depth=0.003):
     """Subtle pitch vibrato via phase modulation — removes the 'frozen' feel."""
     n = len(signal)
-    t = np.arange(n) / SAMPLE_RATE
-    lfo = depth * np.sin(2 * np.pi * rate_hz * t + random.uniform(0, 2 * np.pi))
+    t = np.arange(n, dtype=np.float32) / SAMPLE_RATE
+    lfo = (depth * np.sin(2 * np.pi * rate_hz * t + random.uniform(0, 2 * np.pi))).astype(np.float32)
+    del t
     # Resample via fractional delay using linear interpolation
-    indices = np.arange(n) + lfo * SAMPLE_RATE
-    indices = np.clip(indices, 0, n - 1)
-    lo = indices.astype(int)
-    hi = np.clip(lo + 1, 0, n - 1)
+    indices = np.arange(n, dtype=np.float32)
+    indices += lfo * SAMPLE_RATE                # in-place
+    del lfo
+    np.clip(indices, 0, n - 1, out=indices)     # in-place
+    lo   = indices.astype(np.int32)             # int32 = half the size of int64
     frac = indices - lo
-    return signal[lo] * (1 - frac) + signal[hi] * frac
+    del indices
+    hi = np.clip(lo + 1, 0, n - 1)
+    out = signal[lo] * (1 - frac) + signal[hi] * frac
+    del lo, hi, frac
+    return out.astype(np.float32)
 
 
 def soft_saturate(signal, drive=1.8):
@@ -316,6 +322,7 @@ def make_sequence(target_duration=10.0, output_file="blipblop.wav", play=False, 
         total += dur + gap
 
     audio = np.concatenate(parts)
+    del parts
 
     # Trim to exact target duration
     target_samples = int(target_duration * SAMPLE_RATE)
@@ -383,8 +390,15 @@ def _square(freq, duration, duty=0.5):
     two_pi_k_D = 2.0 * np.pi * ks * duty
     ak = 2.0 * np.sin(two_pi_k_D) / (np.pi * ks)
     bk = 2.0 * (1.0 - np.cos(two_pi_k_D)) / (np.pi * ks)
-    phases = 2.0 * np.pi * freq * np.outer(ks, t)   # (max_h, N)
-    signal = float(2 * duty - 1) + np.dot(ak, np.cos(phases)) + np.dot(bk, np.sin(phases))
+    # Process harmonics in chunks to avoid a (max_h × N) matrix in memory
+    CHUNK_H = 50
+    signal = np.full(len(t), float(2 * duty - 1))
+    for start in range(0, max_h, CHUNK_H):
+        k_chunk = ks[start:start + CHUNK_H]
+        ph = 2.0 * np.pi * freq * np.outer(k_chunk, t)  # (≤50, N) — 10× smaller
+        signal += np.dot(ak[start:start + CHUNK_H], np.cos(ph))
+        signal += np.dot(bk[start:start + CHUNK_H], np.sin(ph))
+        del ph
     peak = np.max(np.abs(signal)) + 1e-9
     return (signal / peak).astype(np.float64)
 
@@ -408,7 +422,7 @@ def _retro_arpeggio(freqs, note_dur=0.04):
         s = _square(f, note_dur, duty=random.choice([0.25, 0.5]))
         s = s * _pulse_env(len(s), 0.5)
         parts.append(s)
-    sig = np.concatenate(parts)
+    sig = np.concatenate(parts); del parts
     return to_stereo(sig / (np.max(np.abs(sig)) + 1e-9) * 0.7)
 
 
@@ -477,7 +491,8 @@ def make_retro_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -648,7 +663,7 @@ def _ui_success():
     for f in freqs:
         parts.append(_ui_sine_blip(f, 0.08))
         parts.append(np.zeros(int(0.025 * SAMPLE_RATE)))
-    s = np.concatenate(parts)
+    s = np.concatenate(parts); del parts
     return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
 
 def _ui_notification():
@@ -806,7 +821,8 @@ def make_scifi_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -843,7 +859,7 @@ def _haptic_buzz():
         env = np.exp(-np.linspace(0, 50, n))
         parts.append((s * env).astype(np.float32))
         parts.append(np.zeros(int(interval * SAMPLE_RATE), dtype=np.float32))
-    mono = np.concatenate(parts)
+    mono = np.concatenate(parts); del parts
     return to_stereo(mono / (np.max(np.abs(mono)) + 1e-9) * 0.78)
 
 
@@ -894,7 +910,8 @@ def make_haptic_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1002,7 +1019,8 @@ def make_radio_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1015,17 +1033,19 @@ def lookahead_limiter(audio, threshold=0.98, lookahead_ms=5.0, release_ms=50.0):
     recovering at release_ms. Catches transient clips while preserving dynamics.
     """
     stereo = audio.ndim == 2
-    x = np.asarray(audio, dtype=np.float64)
-    envelope = np.max(np.abs(x), axis=1) if stereo else np.abs(x)
+    x = audio if audio.dtype == np.float32 else audio.astype(np.float32)
+    envelope = (np.max(np.abs(x), axis=1) if stereo else np.abs(x)).astype(np.float32)
 
     la  = max(1, int(lookahead_ms * SAMPLE_RATE / 1000))
     rel = max(1, int(release_ms   * SAMPLE_RATE / 1000))
 
     # Rolling peak over future `la` samples (lookahead window)
     peak_env = maximum_filter1d(envelope, size=la, origin=-(la // 2))
+    del envelope
 
     # Gain ceiling: reduce instantly when peak exceeds threshold
-    gain = np.where(peak_env > threshold, threshold / (peak_env + 1e-12), 1.0)
+    gain = np.where(peak_env > threshold, threshold / (peak_env + 1e-12), 1.0).astype(np.float32)
+    del peak_env
 
     # Release: gain recovers at most 1/rel per sample (smooth upward ramp)
     release_step = 1.0 / rel
@@ -1144,7 +1164,8 @@ def make_foley_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1244,7 +1265,8 @@ def make_underwater_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1335,7 +1357,8 @@ def make_weather_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1428,7 +1451,8 @@ def make_bell_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1510,7 +1534,8 @@ def make_bass_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1541,11 +1566,11 @@ def _glitch_stutter():
         grain *= np.sin(np.pi * np.linspace(0, 1, len(grain)))
         parts.append(grain)
         parts.append(np.zeros(int(random.uniform(0.001, 0.006) * SAMPLE_RATE)))
-    s = np.concatenate(parts)
+    s = np.concatenate(parts); del parts
     return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
 
 
-def _glitch_corrupt():
+
     """Noise with spikes, dropouts, and DC offsets."""
     dur = random.uniform(0.03, 0.12)
     n = int(dur * SAMPLE_RATE)
@@ -1607,7 +1632,8 @@ def make_glitch_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1660,7 +1686,7 @@ def _pb_drain():
     thud = np.sin(2 * np.pi * random.uniform(90, 150) * np.arange(thud_n) / SAMPLE_RATE)
     thud *= np.exp(-np.linspace(0, 20, thud_n))
     parts.append(thud)
-    s = np.concatenate(parts)
+    s = np.concatenate(parts); del parts
     return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
 
 
@@ -1693,7 +1719,8 @@ def make_pinball_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1786,7 +1813,8 @@ def make_horror_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1975,7 +2003,8 @@ def make_lofi_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -1991,7 +2020,7 @@ def _modem_fsk(freq_lo, freq_hi, duration, baud_rate=300):
         f = random.choice([freq_lo, freq_hi])
         t = _t(bit_dur)
         parts.append(np.sin(2 * np.pi * f * t))
-    s = np.concatenate(parts)
+    s = np.concatenate(parts); del parts
     fade = int(0.01 * SAMPLE_RATE)
     if len(s) > 2 * fade:
         s[:fade] *= np.linspace(0, 1, fade)
@@ -2073,7 +2102,8 @@ def make_modem_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -2094,11 +2124,8 @@ def _insect_cricket():
         env = np.sin(np.pi * np.linspace(0, 1, len(t))) ** 0.5
         parts.append(s * env)
         parts.append(np.zeros(int(random.uniform(0.003, 0.012) * SAMPLE_RATE)))
-    s = np.concatenate(parts)
+    s = np.concatenate(parts); del parts
     return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.65)
-
-
-def _insect_cicada():
     """Cicada buzz: AM-modulated band noise, rapid wing-beat amplitude."""
     dur = random.uniform(0.15, 0.55)
     n = int(dur * SAMPLE_RATE)
@@ -2162,7 +2189,8 @@ def make_insects_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -2252,7 +2280,8 @@ def make_gamelan_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
 
 # =============================================================================
@@ -2322,7 +2351,7 @@ def _arp_phrase():
         parts.append(note)
         if gap_dur > 0:
             parts.append(np.zeros(int(gap_dur * SAMPLE_RATE)))
-    s = np.concatenate(parts)
+    s = np.concatenate(parts); del parts
     s = apply_reverb(s, decay=0.15, num_echoes=3)
     pan = random.uniform(0.25, 0.75)
     stereo = np.column_stack([s * np.sqrt(1 - pan), s * np.sqrt(pan)])
@@ -2338,5 +2367,6 @@ def make_arp_sequence(target_duration=10.0):
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
-    return _finalise(np.concatenate(parts), target_duration)
+    audio = np.concatenate(parts); del parts
+    return _finalise(audio, target_duration)
 
