@@ -20,6 +20,10 @@ import main as bb
 app = Flask(__name__)
 CORS(app)  # allow GitHub Pages to call Render backend
 
+import threading
+_render_sem = threading.Semaphore(1)  # one render at a time; prevents RAM spikes from concurrent requests
+_MAX_WAIT   = 120                     # seconds to wait for a slot before returning 503
+
 
 _DITHER_BITS = {"PCM_16": 16, "PCM_24": 24, "PCM_32": 32}
 
@@ -99,65 +103,70 @@ def generate():
         return send_file(buf, mimetype="audio/wav",
                          as_attachment=False, download_name=name)
 
-    # ── UI Pack → concatenated WAV for playback ───────────────────
-    if mode == "ui-pack":
-        sounds = bb.make_ui_pack()
-        silence_gap = bb.silence(0.25)
-        parts = []
-        for audio in sounds.values():
-            peak = np.max(np.abs(audio))
-            if peak > 0:
-                np.multiply(audio, 0.9886 / peak, out=audio)
-            parts.append(audio)
-            parts.append(silence_gap)
-        combined = np.concatenate(parts[:-1])
-        del parts, sounds, silence_gap
+    if not _render_sem.acquire(timeout=_MAX_WAIT):
+        return {"error": "server busy — please wait a moment and try again"}, 503
+    try:
+        # ── UI Pack → concatenated WAV for playback ───────────────────
+        if mode == "ui-pack":
+            sounds = bb.make_ui_pack()
+            silence_gap = bb.silence(0.25)
+            parts = []
+            for audio in sounds.values():
+                peak = np.max(np.abs(audio))
+                if peak > 0:
+                    np.multiply(audio, 0.9886 / peak, out=audio)
+                parts.append(audio)
+                parts.append(silence_gap)
+            combined = np.concatenate(parts[:-1])
+            del parts, sounds, silence_gap
+            gc.collect()
+            return _finish(combined, "glorb_ui_pack_preview.wav")
+
+        # ── Dispatch all other modes ──────────────────────────────────
+        _MODE_FN = {
+            "nature":    lambda: bb.make_nature_sequence(duration, variant)[0],
+            "scifi":     lambda: bb.make_scifi_sequence(duration),
+            "haptic":    lambda: bb.make_haptic_sequence(duration),
+            "radio":     lambda: bb.make_radio_sequence(duration),
+            "retro":     lambda: bb.make_retro_sequence(duration),
+            "foley":     lambda: bb.make_foley_sequence(duration),
+            "underwater":lambda: bb.make_underwater_sequence(duration),
+            "weather":   lambda: bb.make_weather_sequence(duration),
+            "bell":      lambda: bb.make_bell_sequence(duration),
+            "bass":      lambda: bb.make_bass_sequence(duration),
+            "glitch":    lambda: bb.make_glitch_sequence(duration),
+            "pinball":   lambda: bb.make_pinball_sequence(duration),
+            "horror":    lambda: bb.make_horror_sequence(duration),
+            "granular":  lambda: bb.make_granular_sequence(duration),
+            "lofi":      lambda: bb.make_lofi_sequence(duration),
+            "modem":     lambda: bb.make_modem_sequence(duration),
+            "insects":   lambda: bb.make_insects_sequence(duration),
+            "gamelan":   lambda: bb.make_gamelan_sequence(duration),
+            "arp":       lambda: bb.make_arp_sequence(duration),
+        }
+
+        if mode in _MODE_FN:
+            audio = _MODE_FN[mode]()
+            return _finish(audio, f"glorb_{mode}.wav")
+
+        # ── Glorb (default) ───────────────────────────────────────────
+        import random
+        parts, total = [], 0.0
+        gap_lo = bb._knob(bb.KNOB_ENERGY, 0.22, 0.003)
+        gap_hi = bb._knob(bb.KNOB_ENERGY, 0.80, 0.06)
+        while total < duration:
+            signal, _style, _freq = bb.make_blip()
+            gap = random.uniform(gap_lo, gap_hi)
+            parts.append(signal)
+            parts.append(bb.silence(gap))
+            total += len(signal) / bb.SAMPLE_RATE + gap
+
+        audio = bb._finalise(np.concatenate(parts), duration)
+        del parts
         gc.collect()
-        return _finish(combined, "glorb_ui_pack_preview.wav")
-
-    # ── Dispatch all other modes ──────────────────────────────────
-    _MODE_FN = {
-        "nature":    lambda: bb.make_nature_sequence(duration, variant)[0],
-        "scifi":     lambda: bb.make_scifi_sequence(duration),
-        "haptic":    lambda: bb.make_haptic_sequence(duration),
-        "radio":     lambda: bb.make_radio_sequence(duration),
-        "retro":     lambda: bb.make_retro_sequence(duration),
-        "foley":     lambda: bb.make_foley_sequence(duration),
-        "underwater":lambda: bb.make_underwater_sequence(duration),
-        "weather":   lambda: bb.make_weather_sequence(duration),
-        "bell":      lambda: bb.make_bell_sequence(duration),
-        "bass":      lambda: bb.make_bass_sequence(duration),
-        "glitch":    lambda: bb.make_glitch_sequence(duration),
-        "pinball":   lambda: bb.make_pinball_sequence(duration),
-        "horror":    lambda: bb.make_horror_sequence(duration),
-        "granular":  lambda: bb.make_granular_sequence(duration),
-        "lofi":      lambda: bb.make_lofi_sequence(duration),
-        "modem":     lambda: bb.make_modem_sequence(duration),
-        "insects":   lambda: bb.make_insects_sequence(duration),
-        "gamelan":   lambda: bb.make_gamelan_sequence(duration),
-        "arp":       lambda: bb.make_arp_sequence(duration),
-    }
-
-    if mode in _MODE_FN:
-        audio = _MODE_FN[mode]()
-        return _finish(audio, f"glorb_{mode}.wav")
-
-    # ── Glorb (default) ───────────────────────────────────────────
-    import random
-    parts, total = [], 0.0
-    gap_lo = bb._knob(bb.KNOB_ENERGY, 0.22, 0.003)
-    gap_hi = bb._knob(bb.KNOB_ENERGY, 0.80, 0.06)
-    while total < duration:
-        signal, _style, _freq = bb.make_blip()
-        gap = random.uniform(gap_lo, gap_hi)
-        parts.append(signal)
-        parts.append(bb.silence(gap))
-        total += len(signal) / bb.SAMPLE_RATE + gap
-
-    audio = bb._finalise(np.concatenate(parts), duration)
-    del parts
-    gc.collect()
-    return _finish(audio, "glorb.wav")
+        return _finish(audio, "glorb.wav")
+    finally:
+        _render_sem.release()
 
 
 @app.route("/ui-pack-zip")

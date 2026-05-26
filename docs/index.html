@@ -988,6 +988,7 @@ python main.py --play                 # render &amp; play immediately</pre>
       const res = await fetch(GLORB_API_BASE + '/generate', {
         method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body),
       });
+      if (res.status === 503) throw new Error('server busy — please wait a moment and try again');
       if (!res.ok) throw new Error(`server error ${res.status}`);
       const arrayBuf = await res.arrayBuffer();
       const wavBlob  = new Blob([arrayBuf], {type:'audio/wav'});
