@@ -828,7 +828,11 @@ python main.py --play                 # render &amp; play immediately</pre>
   let isCrossfading = false;
   let currentGainNode = null;
 
-  const root        = document.documentElement;
+  // Mobile unlock: create + resume AudioContext inside a user gesture so iOS/Android allow playback
+  function unlockAudio() {
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
   const vizOverlay  = document.getElementById('viz-overlay');
   const vizCanvas   = document.getElementById('viz-canvas');
   const vizCtx      = vizCanvas.getContext('2d');
@@ -1530,6 +1534,7 @@ python main.py --play                 # render &amp; play immediately</pre>
 
   let glorb_wavBlob = null;
   btnGen.addEventListener('click', async () => {
+    unlockAudio(); // must happen synchronously inside the gesture for mobile
     stopPlayback(); btnGen.disabled = true;
     btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'none';
     setStatus('generating…', 'active'); drawIdle();
@@ -1556,6 +1561,7 @@ python main.py --play                 # render &amp; play immediately</pre>
 
   btnPlay.addEventListener('click', () => {
     if (!audioBuffer) return;
+    unlockAudio(); // must happen synchronously inside the gesture for mobile
     if (isPlaying) { stopPlayback(); return; }
     const startedAt = startAudio();
     btnPlay.textContent = '■ Stop'; btnPlay.classList.add('playing');
