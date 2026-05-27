@@ -263,16 +263,29 @@ def make_blip():
         weights=[max(0.3, 2 - chaos_w * 1.5), 3, 2, max(1, 1 + chaos_w * 3)],
     )[0]
 
+    # 1. Generation
     signal = waveform_fn(freq, duration)
-    signal = apply_envelope(signal)
 
+    # Style selection (metallic combines raw waveforms before saturation)
     style = random.choices(STYLES, weights=[3, 3, 2])[0]
     if style == "metallic":
         ring_freq = freq * random.choice([1.41, 2.73, 3.14])
         ring = sine_wave(ring_freq, duration)
-        ring = apply_envelope(ring)
         signal = 0.7 * signal + 0.3 * ring[:len(signal)]
-    elif style == "echo":
+
+    # 2. Saturation — distorts the source; reverb/echo process the already-distorted signal
+    drive = _knob(KNOB_CHAOS, 1.1, 3.5)
+    signal = soft_saturate(signal, drive=drive)
+
+    # 3. Envelope — shape after saturation so the decay isn't re-distorted
+    signal = apply_envelope(signal)
+
+    # 4. Pitch wobble — before reverb; wobble AM is not fed into saturation
+    wobble_depth = _knob(KNOB_CHAOS, 0.001, 0.012)
+    signal = pitch_wobble(signal, rate_hz=random.uniform(4.0, 10.0), depth=wobble_depth)
+
+    # 5. Echo / Reverb — spatial effects on the shaped, wobbled source
+    if style == "echo":
         delay = random.uniform(0.04, 0.12)
         feedback = random.uniform(0.25, 0.5)
         signal = apply_echo(signal, delay=delay, feedback=feedback)
@@ -280,18 +293,16 @@ def make_blip():
     if random.random() < 0.6:
         signal = apply_reverb(signal, decay=random.uniform(0.2, 0.5), num_echoes=random.randint(2, 5))
 
-    # CHAOS: increases drive, noise, wobble depth
-    wobble_depth  = _knob(KNOB_CHAOS, 0.001, 0.012)
-    drive         = _knob(KNOB_CHAOS, 1.1,   3.5)
-    noise_amount  = _knob(KNOB_CHAOS, 0.001, 0.015)
-    signal = pitch_wobble(signal, rate_hz=random.uniform(4.0, 10.0), depth=wobble_depth)
-    signal = soft_saturate(signal, drive=drive)
-    signal = add_noise(signal, amount=noise_amount)
-
+    # 6. Normalize — establish a consistent peak before adding noise
     peak = np.max(np.abs(signal))
     if peak > 0:
         signal = signal / peak * 0.7
 
+    # 7. Noise — after normalize so level is relative to signal, not raw amplitude
+    noise_amount = _knob(KNOB_CHAOS, 0.001, 0.015)
+    signal = add_noise(signal, amount=noise_amount)
+
+    # 8. Stereo — last stage
     stereo = to_stereo(signal)
     return stereo, style, round(freq)
 
