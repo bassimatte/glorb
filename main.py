@@ -150,15 +150,60 @@ def apply_envelope(signal):
 
 
 def apply_reverb(signal, decay=0.3, num_echoes=4):
-    """Simple comb-filter reverb using delayed copies."""
-    out = signal.copy().astype(np.float64)
-    for i in range(1, num_echoes + 1):
-        delay_samples = int(random.uniform(0.015, 0.06) * SAMPLE_RATE * i)
-        amp = decay ** i
-        if delay_samples < len(out):
-            out[delay_samples:] += amp * signal[:len(out) - delay_samples]
-    peak = np.max(np.abs(out))
-    return (out / peak * 0.8) if peak > 0 else out
+    """Schroeder reverb: 4 fixed-prime-delay parallel combs + 2 allpass diffusers.
+
+    Deterministic prime delays (vs old random delays) eliminate flutter echo
+    and produce smooth, dense reverb tails.  'decay' maps to room size /
+    feedback gain; 'num_echoes' is accepted for API compatibility but unused.
+    Uses FIR approximation via fftconvolve for vectorised performance.
+    """
+    from scipy.signal import fftconvolve
+
+    sig = np.asarray(signal, dtype=np.float32)
+    n   = len(sig)
+    if n == 0:
+        return sig
+
+    # Map legacy 'decay' [0.15–0.50] → comb feedback gain and wet-mix level
+    g_c = float(np.clip(0.70 + 0.36 * decay, 0.70, 0.94))
+    wet = float(np.clip(0.20 + 0.40 * decay, 0.23, 0.40))
+
+    # Fixed prime comb delays (≈29.6 / 37.1 / 41.1 / 43.8 ms at 44 100 Hz)
+    COMB_D = (1307, 1637, 1811, 1931)
+    # Allpass diffuser delays (≈10 ms / 5 ms at 44 100 Hz)
+    AP_D   = (441, 221)
+    g_a    = 0.70
+
+    # FIR tail length: enough terms so g_c^N < −60 dB
+    n_terms = int(np.ceil(-3.0 / np.log10(g_c + 1e-12)))
+    n_terms = min(max(n_terms, 16), 96)
+
+    # ---- 4 parallel comb filters ----------------------------------------
+    # Impulse response: h[kD] = g_c^k  (k = 0, 1, 2, …, n_terms)
+    comb_mix = np.zeros(n, dtype=np.float32)
+    for D in COMB_D:
+        h = np.zeros(D * n_terms + 1, dtype=np.float32)
+        for k in range(n_terms + 1):
+            h[k * D] = g_c ** k
+        comb_mix += fftconvolve(sig, h)[:n].astype(np.float32)
+        del h
+    comb_mix *= np.float32(0.25)
+
+    # ---- 2 series allpass diffusers -------------------------------------
+    # Impulse response: h[0] = -g_a,  h[kD] = g_a^(k-1)*(1-g_a²)  k ≥ 1
+    ap    = comb_mix
+    scale = float(1.0 - g_a * g_a)
+    for D in AP_D:
+        h = np.zeros(D * n_terms + 1, dtype=np.float32)
+        h[0] = -g_a
+        for k in range(1, n_terms + 1):
+            h[k * D] = (g_a ** (k - 1)) * scale
+        ap = fftconvolve(ap, h)[:n].astype(np.float32)
+        del h
+
+    out  = sig * np.float32(1.0 - wet) + ap * np.float32(wet)
+    peak = float(np.max(np.abs(out)))
+    return (out * np.float32(0.8 / peak)) if peak > 1e-6 else out
 
 
 def apply_echo(signal, delay=0.08, feedback=0.4):
