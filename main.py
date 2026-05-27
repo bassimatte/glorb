@@ -71,13 +71,18 @@ def _apply_knob_brightness(audio):
         return (audio + boost * sosfilt(sos, audio)).astype(np.float32)
 
 
-def _apply_knob_chaos(audio):
-    """Tanh drive + pitch wobble based on KNOB_CHAOS."""
+_NOISE_MODES = {'nature', 'weather', 'underwater', 'granular', 'lofi'}
+
+def _apply_knob_chaos(audio, mode='glorb'):
+    """Tanh drive + pitch wobble based on KNOB_CHAOS.
+    Pitch wobble is skipped for noise-dominated modes — broadband noise has no pitch
+    to wobble, so the operation wastes ~484 MB RAM with zero audible effect.
+    """
     if KNOB_CHAOS < 5:
         return audio
     drive = _knob(KNOB_CHAOS, 1.0, 4.0)
     audio = soft_saturate(audio, drive)
-    if KNOB_CHAOS > 55:
+    if KNOB_CHAOS > 55 and mode not in _NOISE_MODES:
         depth = _knob(KNOB_CHAOS, 0.0, 0.007)
         rate  = _knob(KNOB_CHAOS, 0.2, 2.5)
         if audio.ndim == 2:
@@ -116,6 +121,8 @@ def additive_harmonics(freq, duration):
     n_harmonics = random.randint(3, 7)
     signal = np.zeros(len(t))
     for k in range(1, n_harmonics + 1):
+        if freq * k >= SAMPLE_RATE / 2:
+            break  # stop before Nyquist to prevent aliasing
         amp = 1.0 / (k ** random.uniform(0.8, 1.5))
         signal += amp * np.sin(2 * np.pi * freq * k * t)
     return signal / np.max(np.abs(signal) + 1e-9)
@@ -436,8 +443,10 @@ def _retro_jump():
     f1 = f0 * 2.0
     t = _t(0.18)
     freq_curve = f0 * (f1 / f0) ** (t / 0.18)
-    phase = 2 * np.pi * np.cumsum(freq_curve) / SAMPLE_RATE
-    s = np.sign(np.sin(phase))
+    # Use bandlimited _square() at mean frequency to avoid aliasing.
+    # np.sign(np.sin()) produces infinite odd harmonics above Nyquist.
+    f_mean = float(np.mean(freq_curve))
+    s = _square(f_mean, 0.18, duty=0.5)
     s = s * _pulse_env(len(s), 0.3)
     return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
 
@@ -604,7 +613,7 @@ def make_nature_sequence(target_duration=10.0, variant=None):
     if variant is None or variant not in _NATURE_VARIANTS:
         variant = random.choice(list(_NATURE_VARIANTS.keys()))
     audio = _NATURE_VARIANTS[variant](target_duration)
-    return _finalise(audio, target_duration), variant
+    return _finalise(audio, target_duration, mode='nature'), variant
 
 
 # =============================================================================
@@ -1057,7 +1066,7 @@ def lookahead_limiter(audio, threshold=0.98, lookahead_ms=5.0, release_ms=50.0):
     return (x * (gain[:, None] if stereo else gain)).astype(np.float32)
 
 
-def _finalise(audio, target_duration):
+def _finalise(audio, target_duration, mode='glorb'):
     """Trim/pad, apply knob post-processing, lookahead limiting, peak-normalise."""
     target_samples = int(target_duration * SAMPLE_RATE)
     audio = audio[:target_samples]
@@ -1065,7 +1074,7 @@ def _finalise(audio, target_duration):
         pad = target_samples - len(audio)
         audio = np.pad(audio, ((0, pad), (0, 0)))
     audio = _apply_knob_brightness(audio)
-    audio = _apply_knob_chaos(audio)
+    audio = _apply_knob_chaos(audio, mode=mode)
     audio = lookahead_limiter(audio)
     peak = np.max(np.abs(audio))
     if peak > 0:
@@ -1266,7 +1275,7 @@ def make_underwater_sequence(target_duration=10.0):
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
     audio = np.concatenate(parts); del parts
-    return _finalise(audio, target_duration)
+    return _finalise(audio, target_duration, mode='underwater')
 
 
 # =============================================================================
@@ -1358,7 +1367,7 @@ def make_weather_sequence(target_duration=10.0):
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
     audio = np.concatenate(parts); del parts
-    return _finalise(audio, target_duration)
+    return _finalise(audio, target_duration, mode='weather')
 
 
 # =============================================================================
@@ -1918,7 +1927,7 @@ def make_granular_sequence(target_duration=10.0):
         end = min(start + len(sig), total_samples)
         audio[start:end] += sig[:end - start]
         pos = end + int(random.uniform(0.002 * gap_scale, 0.06 * gap_scale) * SAMPLE_RATE)
-    return _finalise(audio, target_duration)
+    return _finalise(audio, target_duration, mode='granular')
 
 
 # =============================================================================
@@ -2004,7 +2013,7 @@ def make_lofi_sequence(target_duration=10.0):
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
     audio = np.concatenate(parts); del parts
-    return _finalise(audio, target_duration)
+    return _finalise(audio, target_duration, mode='lofi')
 
 
 # =============================================================================
