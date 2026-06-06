@@ -180,7 +180,8 @@ pip install numpy sounddevice soundfile scipy flask flask-cors
 ## Deployment
 
 - **Frontend** (GitHub Pages): `docs/index.html` — served statically
-- **Backend** (Render.com): Flask + gunicorn via Docker — `render.yaml` included
+- **Backend** (Railway): Flask + gunicorn via Docker — `https://glorb-production.up.railway.app/`
+- Set `GLORB_MAX_DURATION=120` on the Railway service to match the online UI limit.
 
 ---
 

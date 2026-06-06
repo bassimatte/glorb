@@ -19,7 +19,7 @@ import numpy as np
 try:
     import sounddevice as sd
 except ImportError:
-    sd = None   # not available on server (Render); playback disabled
+    sd = None   # not available on the hosted server; playback disabled
 import soundfile as sf
 import random
 from scipy.ndimage import maximum_filter1d
@@ -2437,4 +2437,3 @@ def make_arp_sequence(target_duration=10.0):
         total += len(sig) / SAMPLE_RATE + gap
     audio = np.concatenate(parts); del parts
     return _finalise(audio, target_duration)
-

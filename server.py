@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import main as bb
 
 app = Flask(__name__)
-CORS(app)  # allow GitHub Pages to call Render backend
+CORS(app)  # allow GitHub Pages to call the hosted backend
 
 import threading
 _render_sem = threading.Semaphore(1)  # one render at a time; prevents RAM spikes from concurrent requests
@@ -71,7 +71,7 @@ def index():
     return render_template("index.html")
 
 
-# Server-side duration cap — set GLORB_MAX_DURATION=60 on Render free tier
+# Server-side duration cap for hosted deployments.
 _MAX_DURATION = float(os.environ.get("GLORB_MAX_DURATION", 300))
 
 
