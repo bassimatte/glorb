@@ -833,6 +833,7 @@ python main.py --play                 # render &amp; play immediately</pre>
     if (!audioCtx) audioCtx = new AudioContext();
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
+  const root        = document.documentElement;
   const vizOverlay  = document.getElementById('viz-overlay');
   const vizCanvas   = document.getElementById('viz-canvas');
   const vizCtx      = vizCanvas.getContext('2d');
