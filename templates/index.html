@@ -538,8 +538,18 @@
 
   <!-- Mode selector -->
   <div class="controls" style="gap:16px;">
+    <!-- Playback mode: top-level -->
     <div class="row">
-      <span class="label">Mode</span>
+      <span class="label">Playback</span>
+      <div class="pills" id="playback-pills">
+        <button class="pill active" data-playback="continuous">Continuous</button>
+        <button class="pill" data-playback="arp">Arp</button>
+        <button class="pill" data-playback="groove">Groove</button>
+      </div>
+    </div>
+    <!-- Preset: sound source -->
+    <div class="row">
+      <span class="label">Preset</span>
       <div class="mode-pills" id="mode-pills">
         <button class="mode-pill active" data-mode="glorb">Glorb</button>
         <button class="mode-pill" data-mode="retro">Retro</button>
@@ -561,7 +571,7 @@
         <button class="mode-pill" data-mode="modem">Modem</button>
         <button class="mode-pill" data-mode="insects">Insects</button>
         <button class="mode-pill" data-mode="gamelan">Gamelan</button>
-        <button class="mode-pill" data-mode="arp">Arp</button>
+        <button class="mode-pill" data-mode="synth">Synth</button>
       </div>
     </div>
     <div class="row" id="nature-row" style="display:none">
@@ -571,6 +581,73 @@
         <button class="pill" data-variant="rain">Rain</button>
         <button class="pill" data-variant="fire">Fire</button>
         <button class="pill" data-variant="insects">Insects</button>
+      </div>
+    </div>
+    <!-- Arp extended controls -->
+    <div class="row" id="arp-row" style="display:none">
+      <span class="label">Arp</span>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="knob-label" style="min-width:42px">Scale</span>
+          <div class="pills" id="arp-scales">
+            <button class="pill active" data-arp-scale="">Rand</button>
+            <button class="pill" data-arp-scale="minor">Minor</button>
+            <button class="pill" data-arp-scale="major">Major</button>
+            <button class="pill" data-arp-scale="dorian">Dorian</button>
+            <button class="pill" data-arp-scale="pentatonic">Penta</button>
+            <button class="pill" data-arp-scale="diminished">Dim</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="knob-label" style="min-width:42px">Root</span>
+          <div class="pills" id="arp-roots">
+            <button class="pill active" data-arp-root="">Rand</button>
+            <button class="pill" data-arp-root="C">C</button>
+            <button class="pill" data-arp-root="D">D</button>
+            <button class="pill" data-arp-root="E">E</button>
+            <button class="pill" data-arp-root="F">F</button>
+            <button class="pill" data-arp-root="G">G</button>
+            <button class="pill" data-arp-root="A">A</button>
+            <button class="pill" data-arp-root="B">B</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="knob-label" style="min-width:42px">Wave</span>
+          <div class="pills" id="arp-waves">
+            <button class="pill active" data-arp-wave="">Rand</button>
+            <button class="pill" data-arp-wave="tri">Tri</button>
+            <button class="pill" data-arp-wave="saw">Saw</button>
+            <button class="pill" data-arp-wave="square">Square</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="knob-label" style="min-width:42px">BPM</span>
+          <input type="range" class="knob-slider" id="arp-bpm" min="40" max="200" value="120" style="flex:1" />
+          <span class="knob-label" id="arp-bpm-lbl" style="min-width:44px">120</span>
+          <span class="knob-label" style="min-width:32px;color:var(--muted)">Rand</span>
+          <input type="checkbox" id="arp-bpm-rand" checked title="Randomise BPM" style="accent-color:var(--accent);cursor:pointer" />
+        </div>
+      </div>
+    </div>
+    <!-- Groove controls -->
+    <div class="row" id="groove-row" style="display:none">
+      <span class="label">Groove</span>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="knob-label" style="min-width:60px">Template</span>
+          <div class="pills" id="groove-templates">
+            <button class="pill active" data-groove-tmpl="four-on-floor">4-on-floor</button>
+            <button class="pill" data-groove-tmpl="breakbeat">Breakbeat</button>
+            <button class="pill" data-groove-tmpl="swing16">Swing</button>
+            <button class="pill" data-groove-tmpl="polyrhythm">Poly</button>
+            <button class="pill" data-groove-tmpl="sparse">Sparse</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="knob-label" style="min-width:60px">BPM</span>
+          <input type="range" class="knob-slider" id="groove-bpm" min="40" max="200" value="90" style="flex:1" />
+          <span class="knob-label" id="groove-bpm-lbl" style="min-width:44px">90 BPM</span>
+        </div>
       </div>
     </div>
   </div>
@@ -791,12 +868,21 @@ python main.py --play                 # render &amp; play immediately</pre>
   let analyser    = null;
   let isPlaying   = false;
   let selectedQ       = 'high';
-  let selectedMode    = 'glorb';
+  let selectedMode    = 'glorb';    // preset (sound source)
+  let selectedPlayback = 'continuous'; // playback engine
   let selectedVariant = 'random';
   let selectedDur     = 5;
   let knobEnergy  = 50;   // 0–100
   let knobBright  = 50;   // 0–100
   let knobChaos   = 50;   // 0–100
+  // Arp extended params
+  let arpScale    = '';   // '' = random
+  let arpRoot     = '';   // '' = random
+  let arpWave     = '';   // '' = random
+  let arpBpm      = null; // null = random
+  // Groove params
+  let grooveBpm      = 90;
+  let grooveTemplate = 'four-on-floor';
   let animId      = null;
   let vizAnimId   = null;
   let vizActive   = false;
@@ -964,9 +1050,21 @@ python main.py --play                 # render &amp; play immediately</pre>
   async function coreGenerate(duration, onProgress, onDone, onError, skipStop = false) {
     if (!skipStop) stopPlayback();
     try {
-      const body = { duration, quality: selectedQ, mode: selectedMode,
+      const body = { duration, quality: selectedQ,
+                     playback: selectedPlayback, preset: selectedMode,
+                     mode: selectedMode,   // legacy compat
                      energy: knobEnergy, brightness: knobBright, chaos: knobChaos };
       if (selectedMode === 'nature' && selectedVariant !== 'random') body.variant = selectedVariant;
+      if (selectedPlayback === 'arp') {
+        if (arpScale)        body.arp_scale = arpScale;
+        if (arpRoot)         body.arp_root  = arpRoot;
+        if (arpWave)         body.arp_wave  = arpWave;
+        if (arpBpm !== null) body.bpm       = arpBpm;
+      }
+      if (selectedPlayback === 'groove') {
+        body.bpm             = grooveBpm;
+        body.groove_template = grooveTemplate;
+      }
       onProgress?.('generating…');
       const res = await fetch('/generate', {
         method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body),
@@ -1399,17 +1497,48 @@ python main.py --play                 # render &amp; play immediately</pre>
     pushHash();
   });
 
-  const modePills = document.querySelectorAll('.mode-pill');
-  const natureRow = document.getElementById('nature-row');
-  const natPills  = document.querySelectorAll('#nature-variants .pill');
+  const modePills   = document.querySelectorAll('.mode-pill');
+  const playbackPills = document.querySelectorAll('#playback-pills .pill');
+  const natureRow   = document.getElementById('nature-row');
+  const arpRow      = document.getElementById('arp-row');
+  const grooveRow   = document.getElementById('groove-row');
+  const natPills    = document.querySelectorAll('#nature-variants .pill');
+
+  function updateSubRows() {
+    natureRow.style.display = selectedMode === 'nature' ? 'flex' : 'none';
+    arpRow.style.display    = selectedPlayback === 'arp'    ? 'flex' : 'none';
+    grooveRow.style.display = selectedPlayback === 'groove' ? 'flex' : 'none';
+    const durRow = document.querySelector('.slider-wrap')?.parentElement;
+    if (durRow) durRow.style.display = selectedMode === 'ui-pack' ? 'none' : 'flex';
+    btnDl.textContent = selectedMode === 'ui-pack' ? '↓ ZIP' : '↓ Save';
+  }
+
+  playbackPills.forEach(p => {
+    p.addEventListener('click', () => {
+      playbackPills.forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      selectedPlayback = p.dataset.playback;
+      updateSubRows();
+      pushHash();
+      if (isPlaying && !isCrossfading) {
+        isCrossfading = true;
+        setStatus('generating next…', 'active');
+        coreGenerate(+sliderDur.value, null,
+          (buf) => { crossfadeTo(buf); setStatus(`ready — ${selectedPlayback} / ${selectedMode}`, 'active'); },
+          (err) => { isCrossfading = false; setStatus('error: ' + err, 'error'); },
+          true);
+      } else {
+        btnGen.click();
+      }
+    });
+  });
 
   modePills.forEach(p => {
     p.addEventListener('click', () => {
       modePills.forEach(x => x.classList.remove('active'));
       selectedMode = p.dataset.mode;
-      natureRow.style.display = selectedMode === 'nature' ? 'flex' : 'none';
-      document.querySelector('.slider-wrap').parentElement.style.display = selectedMode === 'ui-pack' ? 'none' : 'flex';
-      btnDl.textContent = selectedMode === 'ui-pack' ? '↓ ZIP' : '↓ Save';
+      p.classList.add('active');
+      updateSubRows();
       pushHash();
       
       // If playing, queue seamless crossfade; else just generate
@@ -1420,7 +1549,7 @@ python main.py --play                 # render &amp; play immediately</pre>
           null,
           (buf) => {
             crossfadeTo(buf);
-            setStatus(`ready — crossfaded to ${selectedMode}`, 'active');
+            setStatus(`ready — ${selectedPlayback} / ${selectedMode}`, 'active');
           },
           (err) => { isCrossfading = false; setStatus('error: ' + err, 'error'); },
           true  // skipStop = true, don't stop playback
@@ -1437,6 +1566,45 @@ python main.py --play                 # render &amp; play immediately</pre>
       pushHash();
     });
   });
+
+  // ── Arp extended controls ───────────────────────────────────────────
+  function makePillGroup(selector, stateKey, onChange) {
+    const pills = document.querySelectorAll(selector + ' [data-' + stateKey + ']');
+    pills.forEach(p => {
+      p.addEventListener('click', () => {
+        pills.forEach(x => x.classList.remove('active'));
+        p.classList.add('active');
+        onChange(p.dataset[stateKey.replace(/-([a-z])/g, (_, c) => c.toUpperCase())]);
+        schedulePreview(); pushHash();
+      });
+    });
+  }
+  makePillGroup('#arp-scales',    'arp-scale', v => { arpScale = v; });
+  makePillGroup('#arp-roots',     'arp-root',  v => { arpRoot  = v; });
+  makePillGroup('#arp-waves',     'arp-wave',  v => { arpWave  = v; });
+
+  const arpBpmEl     = document.getElementById('arp-bpm');
+  const arpBpmLbl    = document.getElementById('arp-bpm-lbl');
+  const arpBpmRand   = document.getElementById('arp-bpm-rand');
+  arpBpmEl.addEventListener('input', () => {
+    arpBpmLbl.textContent = arpBpmEl.value;
+    if (!arpBpmRand.checked) { arpBpm = +arpBpmEl.value; schedulePreview(); pushHash(); }
+  });
+  arpBpmRand.addEventListener('change', () => {
+    arpBpm = arpBpmRand.checked ? null : +arpBpmEl.value;
+    arpBpmEl.disabled = arpBpmRand.checked;
+    schedulePreview(); pushHash();
+  });
+
+  // ── Groove controls ────────────────────────────────────────────────
+  const grooveBpmEl  = document.getElementById('groove-bpm');
+  const grooveBpmLbl = document.getElementById('groove-bpm-lbl');
+  grooveBpmEl.addEventListener('input', () => {
+    grooveBpm = +grooveBpmEl.value;
+    grooveBpmLbl.textContent = grooveBpm + ' BPM';
+    schedulePreview(); pushHash();
+  });
+  makePillGroup('#groove-templates', 'groove-tmpl', v => { grooveTemplate = v; });
 
   function setStatus(msg, cls='') { statusEl.textContent = msg; statusEl.className = cls; }
 

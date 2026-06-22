@@ -80,13 +80,23 @@ def generate():
     data     = request.get_json(silent=True) or {}
     duration = float(data.get("duration", 10.0))
     quality  = data.get("quality", "high")
-    mode     = data.get("mode", "glorb")
-    variant  = data.get("variant", None)   # for nature mode
+    # New architecture: playback (continuous/arp/groove) + preset (sound source)
+    # Legacy fallback: if only 'mode' is sent treat it as playback=continuous, preset=mode
+    playback = data.get("playback", "continuous")
+    preset   = data.get("preset",   data.get("mode", "glorb"))
+    variant  = data.get("variant",  None)   # for nature preset
 
     # Knob params (0–100, default 50)
     bb.KNOB_ENERGY     = max(0, min(100, int(data.get("energy",     50))))
     bb.KNOB_BRIGHTNESS = max(0, min(100, int(data.get("brightness", 50))))
     bb.KNOB_CHAOS      = max(0, min(100, int(data.get("chaos",      50))))
+
+    # Playback-specific params
+    bpm             = data.get("bpm",            None)
+    groove_template = data.get("groove_template", "four-on-floor")
+    arp_scale       = data.get("arp_scale",       None)
+    arp_root        = data.get("arp_root",        None)
+    arp_wave        = data.get("arp_wave",        None)
 
     duration = max(1.0, min(duration, _MAX_DURATION))
     if quality not in bb.QUALITY_PRESETS:
@@ -106,8 +116,31 @@ def generate():
     if not _render_sem.acquire(timeout=_MAX_WAIT):
         return {"error": "server busy — please wait a moment and try again"}, 503
     try:
-        # ── UI Pack → concatenated WAV for playback ───────────────────
-        if mode == "ui-pack":
+        # ── Groove playback ───────────────────────────────────────────
+        if playback == "groove":
+            audio = bb.make_groove_sequence(
+                duration,
+                bpm=int(bpm or 90),
+                template=groove_template,
+                preset=preset,
+            )
+            return _finish(audio, f"glorb_groove_{preset}.wav")
+
+        # ── Arp playback ──────────────────────────────────────────────
+        if playback == "arp":
+            audio = bb.make_arp_sequence(
+                duration,
+                bpm=bpm,
+                scale=arp_scale,
+                root=arp_root,
+                wave=arp_wave,
+                preset=preset,
+            )
+            return _finish(audio, f"glorb_arp_{preset}.wav")
+
+        # ── Continuous playback (original behaviour) ──────────────────
+        # UI Pack special case
+        if preset == "ui-pack":
             sounds = bb.make_ui_pack()
             silence_gap = bb.silence(0.25)
             parts = []
@@ -122,8 +155,7 @@ def generate():
             gc.collect()
             return _finish(combined, "glorb_ui_pack_preview.wav")
 
-        # ── Dispatch all other modes ──────────────────────────────────
-        _MODE_FN = {
+        _CONTINUOUS_FN = {
             "nature":    lambda: bb.make_nature_sequence(duration, variant)[0],
             "scifi":     lambda: bb.make_scifi_sequence(duration),
             "haptic":    lambda: bb.make_haptic_sequence(duration),
@@ -142,12 +174,14 @@ def generate():
             "modem":     lambda: bb.make_modem_sequence(duration),
             "insects":   lambda: bb.make_insects_sequence(duration),
             "gamelan":   lambda: bb.make_gamelan_sequence(duration),
-            "arp":       lambda: bb.make_arp_sequence(duration),
+            # legacy: if someone sends mode=arp or mode=groove, honour it
+            "arp":       lambda: bb.make_arp_sequence(duration, bpm=bpm, scale=arp_scale, root=arp_root, wave=arp_wave),
+            "groove":    lambda: bb.make_groove_sequence(duration, bpm=int(bpm or 90), template=groove_template),
         }
 
-        if mode in _MODE_FN:
-            audio = _MODE_FN[mode]()
-            return _finish(audio, f"glorb_{mode}.wav")
+        if preset in _CONTINUOUS_FN:
+            audio = _CONTINUOUS_FN[preset]()
+            return _finish(audio, f"glorb_{preset}.wav")
 
         # ── Glorb (default) ───────────────────────────────────────────
         import random

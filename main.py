@@ -2353,6 +2353,49 @@ def make_gamelan_sequence(target_duration=10.0):
 
 
 # =============================================================================
+# PRESET EVENT DISPATCH — single-event generators for groove / arp playback
+# =============================================================================
+
+def _weighted_pick(sounds_table):
+    """Pick and call one event from a (name, fn, weight) dispatch table."""
+    weights = [w for _, _, w in sounds_table]
+    total = sum(weights)
+    r = random.uniform(0, total)
+    cumw = 0
+    for _, fn, w in sounds_table:
+        cumw += w
+        if r <= cumw:
+            return fn()
+    return sounds_table[-1][1]()
+
+
+# Maps preset name → callable that returns one short audio event (mono or stereo np array).
+# 'nature' and 'ui-pack' have no event table; they fall back to glorb blips.
+_PRESET_EVENTS = {
+    'glorb':      lambda: make_blip()[0],
+    'retro':      lambda: _weighted_pick(_RETRO_SOUNDS),
+    'scifi':      lambda: _weighted_pick(_SCIFI_SOUNDS),
+    'haptic':     lambda: _weighted_pick(_HAPTIC_SOUNDS),
+    'radio':      lambda: _weighted_pick(_RADIO_SOUNDS),
+    'foley':      lambda: _weighted_pick(_FOLEY_SOUNDS),
+    'underwater': lambda: _weighted_pick(_UNDERWATER_SOUNDS),
+    'weather':    lambda: _weighted_pick(_WEATHER_SOUNDS),
+    'bell':       lambda: _weighted_pick(_BELL_SOUNDS),
+    'bass':       lambda: _weighted_pick(_BASS_SOUNDS),
+    'glitch':     lambda: _weighted_pick(_GLITCH_SOUNDS),
+    'pinball':    lambda: _weighted_pick(_PINBALL_SOUNDS),
+    'horror':     lambda: _weighted_pick(_HORROR_SOUNDS),
+    'granular':   lambda: _weighted_pick(_GRANULAR_SOUNDS),
+    'lofi':       lambda: _weighted_pick(_LOFI_SOUNDS),
+    'modem':      lambda: _weighted_pick(_MODEM_SOUNDS),
+    'insects':    lambda: _weighted_pick(_INSECT_SOUNDS),
+    'gamelan':    lambda: _weighted_pick(_GAMELAN_SOUNDS),
+    'nature':     lambda: make_blip()[0],   # fallback — no event table
+    'ui-pack':    lambda: make_blip()[0],   # fallback
+}
+
+
+# =============================================================================
 # ARP MODE  synthesizer arpeggiator cycling chord patterns
 # =============================================================================
 
@@ -2397,10 +2440,13 @@ def _arp_note(freq, dur, wave='tri', detune_cents=0.0):
     return s
 
 
-def _arp_phrase():
-    """One arpeggio phrase: scale + root + pattern + synth voice."""
-    scale = random.choice(list(_ARP_SCALES.values()))
-    root_midi = random.randint(48, 72)   # C3–C5
+def _arp_phrase(scale_name=None, root_midi=None, wave=None, note_dur=None):
+    """One arpeggio phrase — all params optional; None → random choice."""
+    scale = _ARP_SCALES.get(scale_name) if scale_name else None
+    if scale is None:
+        scale = random.choice(list(_ARP_SCALES.values()))
+    if root_midi is None:
+        root_midi = random.randint(48, 72)   # C3–C5
     # Build 3-octave scale as MIDI note numbers → frequencies
     freqs = []
     for octave in range(3):
@@ -2408,8 +2454,10 @@ def _arp_phrase():
             midi = root_midi + interval + 12 * octave
             freqs.append(440.0 * (2 ** ((midi - 69) / 12)))
     pattern  = random.choice(_ARP_PATTERNS)
-    wave     = random.choice(['tri', 'saw', 'square'])
-    note_dur = random.uniform(0.04, 0.14)
+    if wave is None:
+        wave = random.choice(['tri', 'saw', 'square'])
+    if note_dur is None:
+        note_dur = random.uniform(0.04, 0.14)
     gap_dur  = random.uniform(0.0, 0.012)
     detune   = random.uniform(-3, 3)
     parts = []
@@ -2426,14 +2474,120 @@ def _arp_phrase():
     return stereo / (np.max(np.abs(stereo)) + 1e-9) * 0.7
 
 
-def make_arp_sequence(target_duration=10.0):
+_ARP_ROOT_MAP = {
+    'C':60,'C#':61,'D':62,'D#':63,'E':64,'F':65,
+    'F#':66,'G':67,'G#':68,'A':69,'A#':70,'B':71,
+}
+
+
+def make_arp_sequence(target_duration=10.0, bpm=None, scale=None, root=None, wave=None, preset='synth'):
+    """Generate an arp sequence.
+    preset='synth': use the built-in tri/saw/square synth voice.
+    Any other preset: use that preset's event sounds at arp timing positions.
+    """
+    # When using preset sounds (not synth), just apply arp timing pattern with preset audio
+    if preset != 'synth':
+        event_fn = _PRESET_EVENTS.get(preset, _PRESET_EVENTS['glorb'])
+        note_dur = None
+        if bpm is not None:
+            bpm = max(40, min(200, int(bpm)))
+            note_dur = 60.0 / bpm / 2
+        parts, total = [], 0.0
+        gap_scale = _knob(KNOB_ENERGY, 2.0, 0.15)
+        while total < target_duration:
+            sig = event_fn()
+            if sig.ndim == 1:
+                sig = np.column_stack([sig, sig])
+            gap = random.uniform(0.05 * gap_scale, 0.35 * gap_scale)
+            if note_dur is not None:
+                gap = note_dur * random.uniform(0.8, 1.2)
+            parts.append(sig)
+            parts.append(silence(gap))
+            total += len(sig) / SAMPLE_RATE + gap
+        audio = np.concatenate(parts); del parts
+        return _finalise(audio, target_duration)
+
+    # Synth arp voice (original behaviour)
+    note_dur = None
+    if bpm is not None:
+        bpm = max(40, min(200, int(bpm)))
+        note_dur = 60.0 / bpm / 2          # half-beat per note
+    root_midi = None
+    if root and root.upper() in _ARP_ROOT_MAP:
+        root_midi = _ARP_ROOT_MAP[root.upper()]
     parts, total = [], 0.0
     gap_scale = _knob(KNOB_ENERGY, 2.0, 0.15)
     while total < target_duration:
-        sig = _arp_phrase()
+        sig = _arp_phrase(scale_name=scale, root_midi=root_midi, wave=wave, note_dur=note_dur)
         gap = random.uniform(0.05 * gap_scale, 0.35 * gap_scale)
         parts.append(sig)
         parts.append(silence(gap))
         total += len(sig) / SAMPLE_RATE + gap
     audio = np.concatenate(parts); del parts
     return _finalise(audio, target_duration)
+
+
+# =============================================================================
+# GROOVE MODE  rhythmically quantised blip sequencer
+# =============================================================================
+
+_GROOVE_TEMPLATES = {
+    # Each entry: list of (beat_position, velocity) within a 4-beat bar
+    "four-on-floor": [(0.0, 1.00), (1.0, 1.00), (2.0, 1.00), (3.0, 1.00)],
+    "breakbeat":     [(0.0, 1.00), (0.75, 0.70), (1.5, 0.85), (2.0, 0.90),
+                      (2.5, 0.60), (3.25, 1.00), (3.5, 0.65)],
+    "swing16":       [(0.0, 1.00), (0.667, 0.70), (1.0, 0.90), (1.667, 0.70),
+                      (2.0, 1.00), (2.667, 0.70), (3.0, 0.90), (3.667, 0.70)],
+    "polyrhythm":    [(0.0, 1.00), (4/3, 0.80), (8/3, 0.80)],
+    "sparse":        [(0.0, 1.00), (1.25, 0.60), (3.0, 0.80)],
+}
+
+
+def make_groove_sequence(target_duration=10.0, bpm=90, template='four-on-floor', preset='glorb'):
+    """Blips stamped onto a rhythmic grid; bpm, template, and preset are user-controlled."""
+    bpm      = max(40, min(200, int(bpm)))
+    beat_dur = 60.0 / bpm
+    bar_dur  = beat_dur * 4
+    events   = _GROOVE_TEMPLATES.get(template, _GROOVE_TEMPLATES['four-on-floor'])
+    event_fn = _PRESET_EVENTS.get(preset, _PRESET_EVENTS['glorb'])
+
+    # Absolute event times (seconds) for every bar needed to fill target_duration
+    all_events = []
+    t = 0.0
+    while t < target_duration + bar_dur:
+        for pos_beats, vel in events:
+            et = t + pos_beats * beat_dur
+            if et < target_duration + 0.5:
+                all_events.append((et, vel))
+        t += bar_dur
+
+    n_total = int((target_duration + 1.0) * SAMPLE_RATE)
+    out = np.zeros((n_total, 2), dtype=np.float32)
+
+    for i, (t_event, vel) in enumerate(all_events):
+        # Max blip duration = gap to next event minus 5 ms guard
+        if i + 1 < len(all_events):
+            max_dur = all_events[i + 1][0] - t_event - 0.005
+        else:
+            max_dur = 0.30
+        max_dur = max(0.02, min(max_dur, 0.35))
+
+        blip = event_fn()
+        if blip.ndim == 1:
+            blip = np.column_stack([blip, blip])
+
+        n_blip = int(max_dur * SAMPLE_RATE)
+        if len(blip) > n_blip:
+            fade = min(128, n_blip // 4)
+            blip = blip[:n_blip].copy()
+            blip[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32)[:, None]
+        else:
+            pad = n_blip - len(blip)
+            blip = np.vstack([blip, np.zeros((pad, 2), dtype=np.float32)])
+
+        start = int(t_event * SAMPLE_RATE)
+        end   = min(start + len(blip), n_total)
+        out[start:end] += blip[:end - start] * np.float32(vel)
+        del blip
+
+    return _finalise(out, target_duration)
