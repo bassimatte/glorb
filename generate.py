@@ -252,8 +252,14 @@ def main():
                         help="Regenerate XLSX only (skip rendering)")
     parser.add_argument("--seed", type=int, default=None,
                         help="Random seed for reproducible renders")
+    parser.add_argument("--list", action="store_true",
+                        help="List available playback modes and sound presets, then exit")
 
     args = parser.parse_args()
+
+    if args.list:
+        bb.print_available_modes_and_presets()
+        return
 
     # ── Determine modes to render ─────────────────────────────────────
     if args.all:

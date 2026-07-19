@@ -32,6 +32,47 @@ QUALITY_PRESETS = {
     "float":    (44100, "FLOAT",  "44100 Hz / 32-bit float"),
 }
 
+# Playback modes define how events are arranged; presets define their source.
+PLAYBACK_MODES = {
+    "continuous": "Free-running generative soundscape",
+    "arp":        "Arpeggiated events with scale, root, waveform, and BPM controls",
+    "groove":     "Rhythmically quantised events using groove templates",
+}
+
+SOUND_PRESETS = {
+    "glorb":      "Abstract electronic blips and bloops",
+    "retro":      "8-bit chiptune square and pulse waves",
+    "nature":     "Birdsong, wind, rain, and forest textures",
+    "scifi":      "Phasers, warp drives, and laser bursts",
+    "haptic":     "Tactile vibration pulses and clicks",
+    "radio":      "AM/FM static, morse, and transmission artefacts",
+    "ui-pack":    "Short interface clicks, pops, and chimes",
+    "foley":      "Footsteps, paper, cloth, and everyday impacts",
+    "underwater": "Sonar pings, bubble trains, and deep pressure tones",
+    "weather":    "Thunder, lightning crackle, and rain layers",
+    "bell":       "Marimba, tubular bells, and resonant metal strikes",
+    "bass":       "Deep sub-bass pulses and 808-style hits",
+    "glitch":     "Buffer corruption, bit-crush, and digital stutter",
+    "pinball":    "Flippers, bumpers, drain, and mechanical clicks",
+    "horror":     "Dissonant drones, breath, reversed tails, and tension",
+    "granular":   "Scattered grain clouds across noise and pitched sources",
+    "lofi":       "Vinyl crackle, tape wow/flutter, and degraded bandwidth",
+    "modem":      "DTMF tones, FSK handshakes, and dial-up screech",
+    "insects":    "Crickets, cicadas, grasshoppers, and water bugs",
+    "gamelan":    "Inharmonic metal bars, detuned pairs, and gong resonance",
+    "synth":      "Dedicated oscillator voice for Arp playback",
+}
+
+
+def print_available_modes_and_presets():
+    """Print the playback-mode and sound-preset catalog."""
+    print("Playback modes:")
+    for name, description in PLAYBACK_MODES.items():
+        print(f"  {name:<12} {description}")
+    print("\nPresets:")
+    for name, description in SOUND_PRESETS.items():
+        print(f"  {name:<12} {description}")
+
 SAMPLE_RATE = 44100  # may be overridden by --quality preset
 
 # ---------------------------------------------------------------------------
@@ -424,7 +465,13 @@ if __name__ == "__main__":
                         help="Output quality preset (default: high = 44100Hz/24-bit)")
     parser.add_argument("--play", action="store_true",
                         help="Play the audio after rendering")
+    parser.add_argument("--list", action="store_true",
+                        help="List available playback modes and sound presets, then exit")
     args = parser.parse_args()
+
+    if args.list:
+        print_available_modes_and_presets()
+        raise SystemExit(0)
 
     make_sequence(target_duration=args.duration, output_file=args.output, play=args.play, quality=args.quality)
 

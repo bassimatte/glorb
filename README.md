@@ -8,7 +8,7 @@
 
 ## What you hear
 
-Glorb generates electronic sounds with an organic, analog feel across **21 sound worlds**. Depending on the mode, you'll hear:
+Glorb combines **3 playback modes** with **21 sound-source presets**. Choose how events are arranged, then choose what they sound like; every combination is generated procedurally.
 
 - **abstract blips and blops** that chirp, sweep and pop like a living circuit board
 - **8-bit chiptune melodies** — square waves stepping through arpeggios with a crisp retro bite
@@ -28,9 +28,17 @@ Three knobs — **⚡ Energy**, **☀ Brightness** and **🌀 Chaos** — shape 
 
 ---
 
-## Sound worlds
+## Playback modes
 
 | Mode | Description |
+|---|---|
+| **Continuous** | Free-running generative soundscape with organic timing |
+| **Arp** | Arpeggiated events with scale, root, waveform, and BPM controls |
+| **Groove** | Rhythmically quantised events using five groove templates and adjustable BPM |
+
+## Presets
+
+| Preset | Description |
 |---|---|
 | **Glorb** | Abstract blip/bloop electronic tones |
 | **Retro** | 8-bit chiptune square and pulse waves |
@@ -52,7 +60,7 @@ Three knobs — **⚡ Energy**, **☀ Brightness** and **🌀 Chaos** — shape 
 | **Modem** | DTMF tones, FSK handshake, connect screech |
 | **Insects** | Crickets, cicadas, grasshoppers, water bugs |
 | **Gamelan** | Inharmonic metal bars, detuned pairs, gong resonance |
-| **Arp** | Generative arpeggiator across minor, major, pentatonic, and modal scales |
+| **Synth** | Dedicated triangle, saw, or square oscillator voice for Arp playback |
 
 ---
 
@@ -93,7 +101,7 @@ python server.py
 
 Open **http://localhost:5000**
 
-Features: 6 colour themes, live waveform, 7 audio-reactive background visualisers (Dots, Wave, Particles, Rings, Matrix, Blobs, None), loop playback, WAV download, shareable URL (🔗 button encodes mode + knobs + settings into the link).
+Features: independent playback-mode and preset selection, extended Arp and Groove controls, 6 colour themes, live waveform, 7 audio-reactive background visualisers (Dots, Wave, Particles, Rings, Matrix, Blobs, None), loop playback, WAV download, and shareable URLs that preserve the complete configuration.
 
 ---
 
@@ -104,6 +112,7 @@ python main.py              # 10s, high quality → blipblop.wav
 python main.py -d 30        # 30s output
 python main.py -q studio    # 48kHz / 24-bit
 python main.py --play       # render and play immediately
+python main.py --list       # list playback modes and presets
 ```
 
 ### Quality presets
@@ -119,7 +128,7 @@ python main.py --play       # render and play immediately
 
 ## Batch renderer (`generate.py`)
 
-Generate audio files for one, several, or all 21 modes — with optional Freesound bulk-upload XLSX:
+Generate audio files for one, several, or all 21 standalone renderers — with optional Freesound bulk-upload XLSX:
 
 ```bash
 # Single mode
@@ -127,6 +136,9 @@ python generate.py --mode glorb
 
 # Multiple modes
 python generate.py --mode glorb retro insects modem
+
+# Show the playback-mode and preset catalog
+python generate.py --list
 
 # All modes, 60 s each, studio quality
 python generate.py --all --duration 60 --quality studio
@@ -156,6 +168,7 @@ python generate.py --all --energy 80 --brightness 30 --chaos 70 --seed 42
 | `--freesound` | off | Generate `freesound_bulk.xlsx` |
 | `--metadata-only` | off | XLSX only, skip rendering |
 | `--seed N` | random | Fix seed for reproducible output |
+| `--list` | — | List playback modes and presets, then exit |
 
 Output files are named `Glorb_<mode>.wav`. The XLSX matches the [Freesound bulk describe](https://freesound.org/home/describe/) template.
 

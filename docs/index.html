@@ -655,6 +655,7 @@
     <div class="info-sub">Generative Sound Synthesiser</div>
 
     <p>Glorb is a browser-based generative audio app powered by a Python synthesis engine. Every sound is built from scratch in real-time — no samples, no loops, pure mathematics.</p>
+    <p>Choose a <strong>playback mode</strong> to control how events are arranged, then a <strong>preset</strong> to choose their sound source. The two layers can be combined independently.</p>
 
     <h3>What you hear</h3>
     <ul>
@@ -695,7 +696,14 @@
       <li><strong>Stereo panning</strong> — randomised left/right placement per sound event</li>
     </ul>
 
-    <h3>21 Sound Worlds</h3>
+    <h3>3 Playback Modes</h3>
+    <ul>
+      <li><strong>Continuous</strong> — free-running generative soundscapes with organic timing</li>
+      <li><strong>Arp</strong> — arpeggiated events with scale, root, waveform, and BPM controls</li>
+      <li><strong>Groove</strong> — rhythmically quantised events using five groove templates and adjustable BPM</li>
+    </ul>
+
+    <h3>21 Presets</h3>
     <ul>
       <li><strong>Glorb</strong> — abstract blip/bloop electronic tones</li>
       <li><strong>Retro</strong> — 8-bit chiptune square and pulse waves</li>
@@ -717,17 +725,17 @@
       <li><strong>Modem</strong> — DTMF tones, FSK handshake, connect screech</li>
       <li><strong>Insects</strong> — crickets, cicadas, grasshoppers, and water bugs</li>
       <li><strong>Gamelan</strong> — inharmonic metal bars, detuned pairs, gong resonance</li>
-      <li><strong>Arp</strong> — generative arpeggiator across minor, major, pentatonic, and modal scales</li>
+      <li><strong>Synth</strong> — dedicated triangle, saw, or square oscillator voice for Arp playback</li>
     </ul>
 
     <h3>Visualiser Backgrounds</h3>
     <p>Seven audio-reactive backgrounds selectable from the settings drawer: <strong>Dots</strong> (dot-grid pulse), <strong>Wave</strong> (oscilloscope), <strong>Particles</strong> (floating field), <strong>Rings</strong> (expanding circles), <strong>Matrix</strong> (falling dot trails), <strong>Blobs</strong> (three frequency-reactive orbs), and <strong>None</strong>.</p>
 
-    <h3>Playback</h3>
+    <h3>Browser Playback</h3>
     <p>Audio is decoded and played via the <strong>Web Audio API</strong>. Playback loops continuously until stopped. The waveform display and visualiser use <strong>Canvas 2D</strong> and a real-time <strong>AnalyserNode</strong> FFT.</p>
 
     <h3>Sharing</h3>
-    <p>Click the <strong>🔗</strong> button to copy a shareable link. The URL encodes the current mode, knobs, duration, quality, theme, and background — so anyone opening it lands on the exact same configuration.</p>
+    <p>Click the <strong>🔗</strong> button to copy a shareable link. The URL preserves the playback mode, preset, playback-specific controls, knobs, duration, quality, theme, and background.</p>
 
     <h3>Offline / Terminal</h3>
     <p>Clone the repo and install dependencies, then run the local server:</p>
@@ -735,9 +743,10 @@
 python server.py          # open http://localhost:5000</pre>
     <p>Or generate WAV files directly from the terminal without the browser:</p>
 <pre>python main.py                        # 10 s glorb → blipblop.wav
-python main.py -d 30 -m retro         # 30 s retro
-python main.py --play                 # render &amp; play immediately</pre>
-    <p>Batch-render all 21 modes and export a Freesound upload sheet:</p>
+python main.py -d 30                  # 30 s glorb
+python main.py --play                 # render &amp; play immediately
+python main.py --list                 # list playback modes and presets</pre>
+    <p>Batch-render selected standalone presets or export a Freesound upload sheet:</p>
 <pre>python generate.py --all --duration 60 --freesound</pre>
 
     <div class="info-credit">Created by <a href="https://freesound.org/people/bassimat/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Matteo Bassi</a></div>
