@@ -737,6 +737,9 @@
     <h3>Sharing</h3>
     <p>Click the <strong>🔗</strong> button to copy a shareable link. The URL preserves the playback mode, preset, playback-specific controls, knobs, duration, quality, theme, and background.</p>
 
+    <h3>Privacy</h3>
+    <p>The public Glorb website uses <a href="https://umami.is/" target="_blank" rel="noopener" style="color:var(--accent)">Umami</a> for anonymous, aggregate usage statistics. It records completed generation, playback, downloads, and sharing so the project can be improved. Glorb does not send knob values, URLs, filenames, audio, or exact error messages. Analytics is disabled for local installations, repository forks, preview deployments, and the Railway backend.</p>
+
     <h3>Offline / Terminal</h3>
     <p>Clone the repo and install dependencies, then run the local server:</p>
 <pre>pip install -r requirements-server.txt
@@ -814,6 +817,104 @@ python main.py --list                 # list playback modes and presets</pre>
 
 <script>
   const GLORB_API_BASE = 'https://glorb-production.up.railway.app';
+  // ── Privacy-safe product analytics ───────────────────────────────────────
+  const GLORB_ANALYTICS_HOST = 'bassimatte.github.io';
+  const GLORB_ANALYTICS_PATH = '/glorb';
+  const GLORB_ANALYTICS_TAG = 'glorb';
+  const GLORB_ANALYTICS_EVENT_PREFIX = 'glorb_';
+  const GLORB_UMAMI_WEBSITE_ID = 'b2300e0b-bc69-49d7-ad05-06f980b5ed38';
+  const GLORB_UMAMI_SCRIPT_URL = 'https://cloud.umami.is/script.js';
+  const GLORB_ANALYTICS_SCHEMA = Object.freeze({
+    generation_completed: {
+      playback: ['continuous', 'arp', 'groove'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'synth'],
+      duration: ['short', 'medium', 'long'],
+      quality: ['standard', 'high', 'studio', 'float'],
+    },
+    generation_failed: {
+      playback: ['continuous', 'arp', 'groove'],
+      reason: ['busy', 'network', 'server', 'decode', 'unknown'],
+    },
+    audio_started: {
+      playback: ['continuous', 'arp', 'groove'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'synth'],
+      source: ['autoplay', 'manual'],
+    },
+    download_completed: {
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'synth'],
+      format: ['wav', 'zip'],
+    },
+    share_copied: { playback: ['continuous', 'arp', 'groove'] },
+  });
+  const pendingAnalyticsEvents = [];
+
+  function analyticsIsConfigured() {
+    const isCanonicalPage = location.hostname === GLORB_ANALYTICS_HOST &&
+      (location.pathname === GLORB_ANALYTICS_PATH ||
+        location.pathname.startsWith(`${GLORB_ANALYTICS_PATH}/`));
+    return isCanonicalPage &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(GLORB_UMAMI_WEBSITE_ID);
+  }
+
+  function sendAnalyticsEvent(eventName, properties) {
+    if (typeof window.umami?.track !== 'function') return false;
+    window.umami.track(`${GLORB_ANALYTICS_EVENT_PREFIX}${eventName}`, properties);
+    return true;
+  }
+
+  function initAnalytics() {
+    if (!analyticsIsConfigured() || document.querySelector('script[data-glorb-analytics]')) return false;
+    const script = document.createElement('script');
+    script.defer = true;
+    script.src = GLORB_UMAMI_SCRIPT_URL;
+    script.dataset.websiteId = GLORB_UMAMI_WEBSITE_ID;
+    script.dataset.tag = GLORB_ANALYTICS_TAG;
+    script.dataset.domains = GLORB_ANALYTICS_HOST;
+    script.dataset.excludeSearch = 'true';
+    script.dataset.excludeHash = 'true';
+    script.dataset.doNotTrack = 'true';
+    script.dataset.glorbAnalytics = 'umami';
+    script.addEventListener('load', () => {
+      pendingAnalyticsEvents.splice(0).forEach(({ eventName, properties }) => sendAnalyticsEvent(eventName, properties));
+    });
+    document.head.appendChild(script);
+    return true;
+  }
+
+  function trackUsage(eventName, properties = {}) {
+    if (!analyticsIsConfigured()) return false;
+    const schema = GLORB_ANALYTICS_SCHEMA[eventName];
+    if (!schema) return false;
+    const props = {};
+    Object.entries(schema).forEach(([key, allowed]) => {
+      const value = String(properties[key] ?? '');
+      if (allowed.includes(value)) props[key] = value;
+    });
+    if (!sendAnalyticsEvent(eventName, props) && pendingAnalyticsEvents.length < 20) {
+      pendingAnalyticsEvents.push({ eventName, properties: props });
+    }
+    return true;
+  }
+
+  function analyticsPlayback() {
+    const value = typeof selectedPlayback === 'undefined' ? 'continuous' : selectedPlayback;
+    return GLORB_ANALYTICS_SCHEMA.audio_started.playback.includes(value) ? value : 'continuous';
+  }
+  function analyticsPreset() {
+    return GLORB_ANALYTICS_SCHEMA.audio_started.preset.includes(selectedMode) ? selectedMode : 'glorb';
+  }
+  function analyticsDuration(seconds) { return seconds <= 10 ? 'short' : seconds <= 30 ? 'medium' : 'long'; }
+  function analyticsFailureReason(message) {
+    const value = String(message || '').toLowerCase();
+    if (value.includes('busy') || value.includes('503')) return 'busy';
+    if (value.includes('decode') || value.includes('audio data')) return 'decode';
+    if (value.includes('server') || /\b5\d\d\b/.test(value)) return 'server';
+    if (value.includes('fetch') || value.includes('network') || value.includes('load failed')) return 'network';
+    return 'unknown';
+  }
+  initAnalytics();
+
   /* ══════════════════════════════════════════════════════════════════
      SHARED STATE
   ══════════════════════════════════════════════════════════════════ */
@@ -971,6 +1072,7 @@ python main.py --list                 # list playback modes and presets</pre>
   floatShare.addEventListener('click', () => {
     pushHash();
     navigator.clipboard.writeText(location.href).then(() => {
+      trackUsage('share_copied', { playback: analyticsPlayback() });
       clearTimeout(shareToastTimer);
       shareToast.classList.add('show');
       shareToastTimer = setTimeout(() => shareToast.classList.remove('show'), 2000);
@@ -1554,6 +1656,10 @@ python main.py --list                 # list playback modes and presets</pre>
     await coreGenerate(+sliderDur.value,
       () => {},
       (buf, blob) => {
+        trackUsage('generation_completed', {
+          playback: analyticsPlayback(), preset: analyticsPreset(),
+          duration: analyticsDuration(+sliderDur.value), quality: selectedQ,
+        });
         glorb_wavBlob = blob;
         drawWaveform(buf, 1);
         btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'inline-block';
@@ -1562,10 +1668,18 @@ python main.py --list                 # list playback modes and presets</pre>
           : `ready — ${buf.duration.toFixed(1)}s · ${buf.sampleRate/1000}kHz · stereo · looping`);
         // Auto-play
         const startedAt = startAudio();
+        trackUsage('audio_started', {
+          playback: analyticsPlayback(), preset: analyticsPreset(), source: 'autoplay',
+        });
         btnPlay.textContent = '■ Stop'; btnPlay.classList.add('playing');
         startProgressLoop(startedAt);
       },
-      msg => setStatus(msg, 'error')
+      msg => {
+        trackUsage('generation_failed', {
+          playback: analyticsPlayback(), reason: analyticsFailureReason(msg),
+        });
+        setStatus(msg, 'error');
+      }
     );
     finishGenProgress();
     btnGen.disabled = false;
@@ -1576,6 +1690,9 @@ python main.py --list                 # list playback modes and presets</pre>
     unlockAudio(); // must happen synchronously inside the gesture for mobile
     if (isPlaying) { stopPlayback(); return; }
     const startedAt = startAudio();
+    trackUsage('audio_started', {
+      playback: analyticsPlayback(), preset: analyticsPreset(), source: 'manual',
+    });
     btnPlay.textContent = '■ Stop'; btnPlay.classList.add('playing');
     startProgressLoop(startedAt);
   });
@@ -1586,11 +1703,15 @@ python main.py --list                 # list playback modes and presets</pre>
       try {
         const res = await fetch(GLORB_API_BASE + `/ui-pack-zip?quality=${selectedQ}`);
         triggerDownload(URL.createObjectURL(await res.blob()), `glorb_ui_pack_${Date.now()}.zip`);
+        trackUsage('download_completed', { preset: analyticsPreset(), format: 'zip' });
         setStatus('zip downloaded — 7 individual wavs');
       } catch(e) { setStatus(e.message, 'error'); }
       btnDl.disabled = false; return;
     }
-    if (glorb_wavBlob) triggerDownload(URL.createObjectURL(glorb_wavBlob), `glorb_${selectedMode}_${Date.now()}.wav`);
+    if (glorb_wavBlob) {
+      triggerDownload(URL.createObjectURL(glorb_wavBlob), `glorb_${selectedMode}_${Date.now()}.wav`);
+      trackUsage('download_completed', { preset: analyticsPreset(), format: 'wav' });
+    }
   });
 
   /* ══════════════════════════════════════════════════════════════════
