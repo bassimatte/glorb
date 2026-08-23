@@ -898,7 +898,7 @@
     <p>Click the <strong>🔗</strong> button to copy a shareable link. The URL preserves the playback mode, preset, playback-specific controls, knobs, duration, quality, theme, and background.</p>
 
     <h3>Privacy</h3>
-    <p>The public Glorb website uses <a href="https://umami.is/" target="_blank" rel="noopener" style="color:var(--accent)">Umami</a> for anonymous, aggregate usage statistics. It records completed generation, playback, downloads, and sharing so the project can be improved. Glorb does not send knob values, URLs, filenames, audio, or exact error messages. Analytics is disabled for local installations, repository forks, preview deployments, and the Railway backend.</p>
+    <p>The public Glorb website uses <a href="https://umami.is/" target="_blank" rel="noopener" style="color:var(--accent)">Umami</a> for anonymous, aggregate usage statistics. It records generation attempts and outcomes, playback, ten-second listening engagement, downloads, and sharing so the project can be improved. Glorb does not send knob values, URLs, filenames, audio, or exact error messages. Analytics is disabled for local installations, repository forks, preview deployments, and the Railway backend.</p>
 
     <h3>Offline / Terminal</h3>
     <p>Clone the repo and install dependencies, then run the local server:</p>
@@ -981,6 +981,12 @@ python main.py --list                 # list playback modes and presets</pre>
   const GLORB_UMAMI_WEBSITE_ID = 'b2300e0b-bc69-49d7-ad05-06f980b5ed38';
   const GLORB_UMAMI_SCRIPT_URL = 'https://cloud.umami.is/script.js';
   const GLORB_ANALYTICS_SCHEMA = Object.freeze({
+    generation_started: {
+      playback: ['continuous', 'arp', 'groove'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+      duration: ['short', 'medium', 'long'],
+      quality: ['standard', 'high', 'studio', 'float'],
+    },
     generation_completed: {
       playback: ['continuous', 'arp', 'groove'],
       preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
@@ -996,11 +1002,24 @@ python main.py --list                 # list playback modes and presets</pre>
       preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
       source: ['autoplay', 'manual'],
     },
+    audio_engaged: {
+      playback: ['continuous', 'arp', 'groove'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+    },
     download_completed: {
+      playback: ['continuous', 'arp', 'groove'],
       preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
       format: ['wav', 'zip'],
     },
-    share_copied: { playback: ['continuous', 'arp', 'groove'] },
+    download_failed: {
+      playback: ['continuous', 'arp', 'groove'],
+      format: ['wav', 'zip'],
+      reason: ['busy', 'network', 'server', 'decode', 'unknown'],
+    },
+    share_copied: {
+      playback: ['continuous', 'arp', 'groove'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+    },
   });
   const pendingAnalyticsEvents = [];
 
@@ -1079,6 +1098,8 @@ python main.py --list                 # list playback modes and presets</pre>
   let sourceNode  = null;
   let analyser    = null;
   let isPlaying   = false;
+  let audioEngagementTimer = null;
+  let audioEngagementTracked = false;
   let selectedQ       = 'high';
   let selectedMode    = 'glorb';    // preset (sound source)
   let selectedPlayback = 'continuous'; // playback engine
@@ -1238,7 +1259,9 @@ python main.py --list                 # list playback modes and presets</pre>
   floatShare.addEventListener('click', () => {
     pushHash();
     navigator.clipboard.writeText(location.href).then(() => {
-      trackUsage('share_copied', { playback: analyticsPlayback() });
+      trackUsage('share_copied', {
+        playback: analyticsPlayback(), preset: analyticsPreset(),
+      });
       clearTimeout(shareToastTimer);
       shareToast.classList.add('show');
       shareToastTimer = setTimeout(() => shareToast.classList.remove('show'), 2000);
@@ -1338,7 +1361,20 @@ python main.py --list                 # list playback modes and presets</pre>
     return startedAt;
   }
 
+  function scheduleAudioEngagement() {
+    clearTimeout(audioEngagementTimer);
+    if (audioEngagementTracked) return;
+    const playback = analyticsPlayback();
+    const preset = analyticsPreset();
+    audioEngagementTimer = setTimeout(() => {
+      if (!isPlaying || audioEngagementTracked) return;
+      trackUsage('audio_engaged', { playback, preset });
+      audioEngagementTracked = true;
+    }, 10000);
+  }
+
   function stopPlayback() {
+    clearTimeout(audioEngagementTimer);
     clearTimeout(previewTimer);  // cancel any pending knob preview
     previewGenId++;              // invalidate any in-flight preview generation
     if (sourceNode) { try { sourceNode.stop(); } catch(_){} sourceNode = null; }
@@ -1901,6 +1937,10 @@ python main.py --list                 # list playback modes and presets</pre>
     btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'none';
     setStatus('generating…', 'active'); drawIdle();
     startGenProgress();
+    trackUsage('generation_started', {
+      playback: analyticsPlayback(), preset: analyticsPreset(),
+      duration: analyticsDuration(+sliderDur.value), quality: selectedQ,
+    });
     await coreGenerate(+sliderDur.value,
       () => {},
       (buf, blob) => {
@@ -1908,6 +1948,7 @@ python main.py --list                 # list playback modes and presets</pre>
           playback: analyticsPlayback(), preset: analyticsPreset(),
           duration: analyticsDuration(+sliderDur.value), quality: selectedQ,
         });
+        audioEngagementTracked = false;
         glorb_wavBlob = blob;
         drawWaveform(buf, 1);
         btnPlay.style.display = btnViz.style.display = btnDl.style.display = 'inline-block';
@@ -1919,6 +1960,7 @@ python main.py --list                 # list playback modes and presets</pre>
         trackUsage('audio_started', {
           playback: analyticsPlayback(), preset: analyticsPreset(), source: 'autoplay',
         });
+        scheduleAudioEngagement();
         btnPlay.textContent = '■ Stop'; btnPlay.classList.add('playing');
         startProgressLoop(startedAt);
       },
@@ -1941,6 +1983,7 @@ python main.py --list                 # list playback modes and presets</pre>
     trackUsage('audio_started', {
       playback: analyticsPlayback(), preset: analyticsPreset(), source: 'manual',
     });
+    scheduleAudioEngagement();
     btnPlay.textContent = '■ Stop'; btnPlay.classList.add('playing');
     startProgressLoop(startedAt);
   });
@@ -1950,15 +1993,25 @@ python main.py --list                 # list playback modes and presets</pre>
       setStatus('building zip…', 'active'); btnDl.disabled = true;
       try {
         const res = await fetch(`/ui-pack-zip?quality=${selectedQ}`);
+        if (!res.ok) throw new Error(`server error ${res.status}`);
         triggerDownload(URL.createObjectURL(await res.blob()), `glorb_ui_pack_${Date.now()}.zip`);
-        trackUsage('download_completed', { preset: analyticsPreset(), format: 'zip' });
+        trackUsage('download_completed', {
+          playback: analyticsPlayback(), preset: analyticsPreset(), format: 'zip',
+        });
         setStatus('zip downloaded — 7 individual wavs');
-      } catch(e) { setStatus(e.message, 'error'); }
+      } catch(e) {
+        trackUsage('download_failed', {
+          playback: analyticsPlayback(), format: 'zip', reason: analyticsFailureReason(e.message),
+        });
+        setStatus(e.message, 'error');
+      }
       btnDl.disabled = false; return;
     }
     if (glorb_wavBlob) {
       triggerDownload(URL.createObjectURL(glorb_wavBlob), `glorb_${selectedMode}_${Date.now()}.wav`);
-      trackUsage('download_completed', { preset: analyticsPreset(), format: 'wav' });
+      trackUsage('download_completed', {
+        playback: analyticsPlayback(), preset: analyticsPreset(), format: 'wav',
+      });
     }
   });
 
@@ -1999,6 +2052,7 @@ python main.py --list                 # list playback modes and presets</pre>
     stopPlayback(); vizActive = true;
     vizOverlay.classList.add('active'); resizeVizCanvas();
     const startedAt = startAudio();
+    scheduleAudioEngagement();
     startProgressLoop(startedAt); drawViz();
   }
   function closeViz() {

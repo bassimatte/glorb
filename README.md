@@ -203,7 +203,7 @@ pip install numpy sounddevice soundfile scipy flask flask-cors
 
 ## Privacy and analytics
 
-The canonical GitHub Pages site uses cookieless [Umami](https://umami.is/) analytics for anonymous, aggregate product statistics. Tracking is restricted to `bassimatte.github.io/glorb`, respects Do Not Track, excludes URL queries and fragments, and is not loaded by local installations, forks, previews, or the Railway backend. Custom events use the `glorb_` prefix and the `glorb` tracker tag. No knob values, URLs, filenames, audio, or exact error messages are sent.
+The canonical GitHub Pages site uses cookieless [Umami](https://umami.is/) analytics for anonymous, aggregate product statistics. Tracking is restricted to `bassimatte.github.io/glorb`, respects Do Not Track, excludes URL queries and fragments, and is not loaded by local installations, forks, previews, or the Railway backend. It measures generation attempts and outcomes, playback, ten-second listening engagement, downloads, and sharing. Custom events use the `glorb_` prefix and the `glorb` tracker tag. No knob values, URLs, filenames, audio, or exact error messages are sent.
 
 ---
 

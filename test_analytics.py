@@ -47,15 +47,37 @@ class AnalyticsTests(unittest.TestCase):
             )
             self.assertIsNotNone(schema)
             for event in (
+                "generation_started",
                 "generation_completed",
                 "generation_failed",
                 "audio_started",
+                "audio_engaged",
                 "download_completed",
+                "download_failed",
                 "share_copied",
             ):
                 self.assertIn(f"{event}:", schema.group(1))
                 self.assertRegex(html, rf"trackUsage\('{event}'")
             self.assertIn("if (allowed.includes(value)) props[key] = value;", html)
+
+    def test_product_funnel_is_measurable(self):
+        for html in (self.template, self.docs):
+            self.assertRegex(
+                html,
+                r"trackUsage\('generation_started'[\s\S]*?playback: analyticsPlayback\(\), "
+                r"preset: analyticsPreset\(\)[\s\S]*?duration: analyticsDuration",
+            )
+            self.assertIn("trackUsage('audio_engaged', { playback, preset });", html)
+            self.assertIn("}, 10000);", html)
+            self.assertRegex(
+                html,
+                r"trackUsage\('share_copied'[\s\S]*?preset: analyticsPreset\(\)",
+            )
+            self.assertRegex(
+                html,
+                r"trackUsage\('download_completed'[\s\S]*?playback: analyticsPlayback\(\)",
+            )
+            self.assertRegex(html, r"trackUsage\('download_failed'")
 
     def test_sensitive_values_are_not_sent(self):
         for html in (self.template, self.docs):
