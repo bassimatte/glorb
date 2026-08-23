@@ -577,6 +577,11 @@
         <button class="mode-pill" data-mode="modem">Modem</button>
         <button class="mode-pill" data-mode="insects">Insects</button>
         <button class="mode-pill" data-mode="gamelan">Gamelan</button>
+        <button class="mode-pill" data-mode="glass">Glass</button>
+        <button class="mode-pill" data-mode="clockwork">Clockwork</button>
+        <button class="mode-pill" data-mode="creature">Creature</button>
+        <button class="mode-pill" data-mode="electricity">Electricity</button>
+        <button class="mode-pill" data-mode="cave">Cave</button>
         <button class="mode-pill" data-mode="arp">Arp</button>
       </div>
     </div>
@@ -703,7 +708,7 @@
       <li><strong>Groove</strong> — rhythmically quantised events using five groove templates and adjustable BPM</li>
     </ul>
 
-    <h3>21 Presets</h3>
+    <h3>26 Presets</h3>
     <ul>
       <li><strong>Glorb</strong> — abstract blip/bloop electronic tones</li>
       <li><strong>Retro</strong> — 8-bit chiptune square and pulse waves</li>
@@ -725,6 +730,11 @@
       <li><strong>Modem</strong> — DTMF tones, FSK handshake, connect screech</li>
       <li><strong>Insects</strong> — crickets, cicadas, grasshoppers, and water bugs</li>
       <li><strong>Gamelan</strong> — inharmonic metal bars, detuned pairs, gong resonance</li>
+      <li><strong>Glass</strong> — brittle shards, singing rims, and crystalline resonances</li>
+      <li><strong>Clockwork</strong> — ticks, ratchets, springs, and tiny mechanisms</li>
+      <li><strong>Creature</strong> — imaginary chirps, calls, growls, and breath</li>
+      <li><strong>Electricity</strong> — arcs, transformer hum, relays, and rising charge</li>
+      <li><strong>Cave</strong> — drips, stones, subterranean wind, and deep rumbles</li>
       <li><strong>Synth</strong> — dedicated triangle, saw, or square oscillator voice for Arp playback</li>
     </ul>
 
@@ -827,7 +837,7 @@ python main.py --list                 # list playback modes and presets</pre>
   const GLORB_ANALYTICS_SCHEMA = Object.freeze({
     generation_completed: {
       playback: ['continuous', 'arp', 'groove'],
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
       duration: ['short', 'medium', 'long'],
       quality: ['standard', 'high', 'studio', 'float'],
     },
@@ -837,11 +847,11 @@ python main.py --list                 # list playback modes and presets</pre>
     },
     audio_started: {
       playback: ['continuous', 'arp', 'groove'],
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
       source: ['autoplay', 'manual'],
     },
     download_completed: {
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
       format: ['wav', 'zip'],
     },
     share_copied: { playback: ['continuous', 'arp', 'groove'] },

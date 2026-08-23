@@ -174,6 +174,11 @@ def generate():
             "modem":     lambda: bb.make_modem_sequence(duration),
             "insects":   lambda: bb.make_insects_sequence(duration),
             "gamelan":   lambda: bb.make_gamelan_sequence(duration),
+            "glass":     lambda: bb.make_glass_sequence(duration),
+            "clockwork": lambda: bb.make_clockwork_sequence(duration),
+            "creature":  lambda: bb.make_creature_sequence(duration),
+            "electricity":lambda: bb.make_electricity_sequence(duration),
+            "cave":      lambda: bb.make_cave_sequence(duration),
             # legacy: if someone sends mode=arp or mode=groove, honour it
             "arp":       lambda: bb.make_arp_sequence(duration, bpm=bpm, scale=arp_scale, root=arp_root, wave=arp_wave),
             "groove":    lambda: bb.make_groove_sequence(duration, bpm=int(bpm or 90), template=groove_template),

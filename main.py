@@ -60,6 +60,11 @@ SOUND_PRESETS = {
     "modem":      "DTMF tones, FSK handshakes, and dial-up screech",
     "insects":    "Crickets, cicadas, grasshoppers, and water bugs",
     "gamelan":    "Inharmonic metal bars, detuned pairs, and gong resonance",
+    "glass":      "Brittle shards, singing rims, and crystalline resonances",
+    "clockwork":  "Ticks, ratchets, springs, and tiny mechanisms",
+    "creature":   "Imaginary chirps, calls, growls, and breath",
+    "electricity":"Arcs, transformer hum, relays, and rising charge",
+    "cave":       "Drips, stones, subterranean wind, and deep rumbles",
     "synth":      "Dedicated oscillator voice for Arp playback",
 }
 
@@ -2400,6 +2405,248 @@ def make_gamelan_sequence(target_duration=10.0):
 
 
 # =============================================================================
+# GLASS / CLOCKWORK / CREATURE / ELECTRICITY / CAVE PRESETS
+# =============================================================================
+
+def _modal_strike(partials, duration, base=None, decay=8.0, noise=0.12):
+    """Inharmonic struck resonator shared by glass, clockwork, and cave events."""
+    base = random.uniform(300, 900) if base is None else base
+    t = _t(duration)
+    s = np.zeros(len(t), dtype=np.float64)
+    for i, ratio in enumerate(partials):
+        freq = base * ratio * random.uniform(0.996, 1.004)
+        if freq >= SAMPLE_RATE * 0.45:
+            continue
+        s += (1.0 / (1 + i * 0.55)) * np.sin(2 * np.pi * freq * t) \
+             * np.exp(-(decay * (1 + i * 0.32)) * t / duration)
+    attack = min(len(s), max(2, int(0.004 * SAMPLE_RATE)))
+    s[:attack] += np.random.randn(attack) * noise * np.linspace(1, 0, attack)
+    return s
+
+
+def _glass_ping():
+    dur = random.uniform(0.35, 1.1)
+    s = _modal_strike([1, 2.32, 4.25, 6.63], dur, decay=7.0, noise=0.08)
+    s = apply_reverb(s, decay=0.22, num_echoes=3)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.72)
+
+
+def _glass_shard():
+    dur = random.uniform(0.08, 0.24)
+    n = int(dur * SAMPLE_RATE)
+    s = np.zeros(n)
+    for _ in range(random.randint(3, 8)):
+        start = random.randrange(max(1, int(n * 0.65)))
+        length = min(n - start, random.randint(max(4, int(.01 * SAMPLE_RATE)), max(5, int(.05 * SAMPLE_RATE))))
+        t = np.arange(length) / SAMPLE_RATE
+        freq = random.uniform(1800, min(9000, SAMPLE_RATE * .42))
+        s[start:start + length] += np.sin(2 * np.pi * freq * t) * np.exp(-np.linspace(0, 16, length))
+    s += _bandpass(np.random.randn(n), 1800, min(10000, SAMPLE_RATE * .45)) * np.exp(-np.linspace(0, 28, n)) * .22
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * 0.7)
+
+
+def _glass_rim():
+    dur = random.uniform(0.5, 1.4)
+    t = _t(dur)
+    base = random.uniform(420, 1100)
+    wobble = 1 + .002 * np.sin(2 * np.pi * random.uniform(3, 7) * t)
+    phase = 2 * np.pi * np.cumsum(base * wobble) / SAMPLE_RATE
+    s = (np.sin(phase) + .35 * np.sin(phase * 2.71)) * np.exp(-np.linspace(0, 5, len(t)))
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .68)
+
+
+_GLASS_SOUNDS = [("ping", _glass_ping, 4), ("shard", _glass_shard, 2), ("rim", _glass_rim, 3)]
+
+
+def _clock_tick():
+    dur = random.uniform(.018, .055)
+    n = int(dur * SAMPLE_RATE)
+    t = np.arange(n) / SAMPLE_RATE
+    s = .65 * np.sin(2 * np.pi * random.uniform(900, 2200) * t)
+    s += .55 * _bandpass(np.random.randn(n), 1200, min(7000, SAMPLE_RATE * .44))
+    s *= np.exp(-np.linspace(0, 24, n))
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .66)
+
+
+def _clock_ratchet():
+    count = random.randint(4, 11)
+    spacing = random.uniform(.014, .035)
+    n = int((count * spacing + .05) * SAMPLE_RATE)
+    s = np.zeros(n)
+    for i in range(count):
+        click = _clock_tick()[:, 0]
+        start = int(i * spacing * SAMPLE_RATE)
+        end = min(n, start + len(click))
+        s[start:end] += click[:end-start] * (1 - i / (count * 1.4))
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .7)
+
+
+def _clock_spring():
+    dur = random.uniform(.15, .55)
+    t = _t(dur)
+    f0, f1 = random.uniform(120, 260), random.uniform(700, 1800)
+    freq = f0 + (f1 - f0) * np.sin(np.pi * t / dur) ** 2
+    phase = 2 * np.pi * np.cumsum(freq) / SAMPLE_RATE
+    s = np.sin(phase + 1.8 * np.sin(phase * .37)) * np.exp(-np.linspace(0, 7, len(t)))
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .7)
+
+
+_CLOCKWORK_SOUNDS = [("tick", _clock_tick, 6), ("ratchet", _clock_ratchet, 3), ("spring", _clock_spring, 2)]
+
+
+def _creature_chirp():
+    dur = random.uniform(.08, .32)
+    t = _t(dur)
+    base = random.uniform(180, 750)
+    contour = 1 + random.uniform(.4, 1.5) * np.sin(np.pi * t / dur) ** random.uniform(.7, 1.8)
+    vibrato = 1 + random.uniform(.01, .045) * np.sin(2 * np.pi * random.uniform(12, 35) * t)
+    phase = 2 * np.pi * np.cumsum(base * contour * vibrato) / SAMPLE_RATE
+    s = np.sin(phase) + .35 * np.sin(2 * phase) + .16 * np.sin(3 * phase)
+    s *= np.sin(np.pi * np.linspace(0, 1, len(t))) ** .7
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .68)
+
+
+def _creature_growl():
+    dur = random.uniform(.25, .8)
+    t = _t(dur)
+    f0 = random.uniform(45, 110)
+    phase = 2 * np.pi * np.cumsum(f0 * (1 + .08 * np.sin(2*np.pi*random.uniform(3, 8)*t))) / SAMPLE_RATE
+    voice = np.sin(phase) + .6*np.sin(2*phase) + .35*np.sin(3*phase) + .2*np.sin(5*phase)
+    breath = _bandpass(np.random.randn(len(t)), 80, 900) * .28
+    s = soft_saturate((voice + breath) * np.sin(np.pi*np.linspace(0, 1, len(t))), 1.8)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .7)
+
+
+def _creature_call():
+    count = random.randint(2, 5)
+    parts = []
+    for i in range(count):
+        call = _creature_chirp()
+        parts.extend([call, silence(random.uniform(.025, .09) * (1 + i*.12))])
+    return np.concatenate(parts[:-1])
+
+
+def _creature_breath():
+    dur = random.uniform(.25, .7)
+    n = int(dur * SAMPLE_RATE)
+    s = _bandpass(np.random.randn(n), 180, 2400)
+    s *= np.sin(np.pi * np.linspace(0, 1, n)) ** 1.5
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .55)
+
+
+_CREATURE_SOUNDS = [("chirp", _creature_chirp, 4), ("growl", _creature_growl, 2), ("call", _creature_call, 3), ("breath", _creature_breath, 2)]
+
+
+def _electric_arc():
+    dur = random.uniform(.04, .22)
+    n = int(dur * SAMPLE_RATE)
+    noise = _bandpass(np.random.randn(n), 500, min(10000, SAMPLE_RATE*.45))
+    gate = (np.random.random(n) > random.uniform(.72, .9)).astype(float)
+    s = soft_saturate(noise * gate * np.exp(-np.linspace(0, 7, n)), 2.5)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .72)
+
+
+def _electric_hum():
+    dur = random.uniform(.25, .8)
+    t = _t(dur)
+    mains = random.choice([50, 60])
+    s = sum((1/i) * np.sin(2*np.pi*mains*i*t) for i in range(1, 7))
+    s *= (.65 + .35*np.sin(2*np.pi*random.uniform(3, 9)*t)) * np.sin(np.pi*np.linspace(0, 1, len(t)))
+    s += _bandpass(np.random.randn(len(t)), 1200, 5000) * .08
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .62)
+
+
+def _electric_relay():
+    click = _clock_tick()
+    thud = _modal_strike([1, 1.7, 2.8], random.uniform(.04, .11), base=random.uniform(90, 180), decay=15, noise=.2)
+    thud = to_stereo(thud / (np.max(np.abs(thud)) + 1e-9) * .6)
+    n = max(len(click), len(thud)); out = np.zeros((n, 2)); out[:len(click)] += click; out[:len(thud)] += thud
+    return out / (np.max(np.abs(out)) + 1e-9) * .7
+
+
+def _electric_charge():
+    dur = random.uniform(.12, .4)
+    t = _t(dur)
+    f0, f1 = random.uniform(80, 180), random.uniform(1800, 5000)
+    freq = f0 * (f1/f0) ** (t/dur)
+    phase = 2*np.pi*np.cumsum(freq)/SAMPLE_RATE
+    s = (np.sin(phase) + .25*np.sign(np.sin(phase*1.013))) * np.linspace(0, 1, len(t))
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .65)
+
+
+_ELECTRICITY_SOUNDS = [("arc", _electric_arc, 4), ("hum", _electric_hum, 2), ("relay", _electric_relay, 3), ("charge", _electric_charge, 2)]
+
+
+def _cave_drip():
+    dur = random.uniform(.3, .85)
+    t = _t(dur)
+    f0, f1 = random.uniform(500, 1100), random.uniform(180, 420)
+    freq = f0 * (f1/f0) ** (t/dur)
+    phase = 2*np.pi*np.cumsum(freq)/SAMPLE_RATE
+    s = np.sin(phase) * np.exp(-np.linspace(0, 13, len(t)))
+    s = apply_reverb(s, decay=.7, num_echoes=9)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .66)
+
+
+def _cave_stone():
+    dur = random.uniform(.35, 1.1)
+    base = random.uniform(70, 240)
+    s = _modal_strike([1, 1.47, 2.09, 3.23], dur, base=base, decay=7, noise=.32)
+    s = apply_reverb(s, decay=.75, num_echoes=8)
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .72)
+
+
+def _cave_rumble():
+    dur = random.uniform(.5, 1.8)
+    n = int(dur*SAMPLE_RATE)
+    s = _bandpass(np.random.randn(n), 20, 180)
+    s *= np.sin(np.pi*np.linspace(0, 1, n)) ** .7
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .58)
+
+
+def _cave_wind():
+    dur = random.uniform(.5, 1.4)
+    n = int(dur*SAMPLE_RATE); t = np.arange(n)/SAMPLE_RATE
+    s = _bandpass(np.random.randn(n), 80, 850)
+    s *= (.3 + .7*np.sin(np.pi*np.linspace(0, 1, n))) * (.75 + .25*np.sin(2*np.pi*random.uniform(.2,.7)*t))
+    return to_stereo(s / (np.max(np.abs(s)) + 1e-9) * .5)
+
+
+_CAVE_SOUNDS = [("drip", _cave_drip, 5), ("stone", _cave_stone, 3), ("rumble", _cave_rumble, 2), ("wind", _cave_wind, 2)]
+
+
+def _make_sound_table_sequence(sounds, target_duration, gap_range, mode='glorb'):
+    parts, total = [], 0.0
+    gap_scale = _knob(KNOB_ENERGY, 2.8, .3)
+    while total < target_duration:
+        sig = _weighted_pick(sounds)
+        gap = random.uniform(gap_range[0]*gap_scale, gap_range[1]*gap_scale)
+        parts.extend([sig, silence(gap)])
+        total += len(sig)/SAMPLE_RATE + gap
+    return _finalise(np.concatenate(parts), target_duration, mode=mode)
+
+
+def make_glass_sequence(target_duration=10.0):
+    return _make_sound_table_sequence(_GLASS_SOUNDS, target_duration, (.08, .45))
+
+
+def make_clockwork_sequence(target_duration=10.0):
+    return _make_sound_table_sequence(_CLOCKWORK_SOUNDS, target_duration, (.025, .22))
+
+
+def make_creature_sequence(target_duration=10.0):
+    return _make_sound_table_sequence(_CREATURE_SOUNDS, target_duration, (.1, .55))
+
+
+def make_electricity_sequence(target_duration=10.0):
+    return _make_sound_table_sequence(_ELECTRICITY_SOUNDS, target_duration, (.04, .3))
+
+
+def make_cave_sequence(target_duration=10.0):
+    return _make_sound_table_sequence(_CAVE_SOUNDS, target_duration, (.18, .85), mode='cave')
+
+
+# =============================================================================
 # PRESET EVENT DISPATCH — single-event generators for groove / arp playback
 # =============================================================================
 
@@ -2437,6 +2684,11 @@ _PRESET_EVENTS = {
     'modem':      lambda: _weighted_pick(_MODEM_SOUNDS),
     'insects':    lambda: _weighted_pick(_INSECT_SOUNDS),
     'gamelan':    lambda: _weighted_pick(_GAMELAN_SOUNDS),
+    'glass':      lambda: _weighted_pick(_GLASS_SOUNDS),
+    'clockwork':  lambda: _weighted_pick(_CLOCKWORK_SOUNDS),
+    'creature':   lambda: _weighted_pick(_CREATURE_SOUNDS),
+    'electricity':lambda: _weighted_pick(_ELECTRICITY_SOUNDS),
+    'cave':       lambda: _weighted_pick(_CAVE_SOUNDS),
     'nature':     lambda: make_blip()[0],   # fallback — no event table
     'ui-pack':    lambda: make_blip()[0],   # fallback
 }

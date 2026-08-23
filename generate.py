@@ -5,7 +5,7 @@ Usage examples:
     python generate.py                              # interactive mode selector
     python generate.py --mode glorb                 # single mode, default settings
     python generate.py --mode glorb retro insects   # multiple modes
-    python generate.py --all                        # all 21 modes
+    python generate.py --all                        # all 26 modes
     python generate.py --all --duration 60          # all modes, 60 s each
     python generate.py --all --quality studio --output-dir exports/glorb
     python generate.py --all --freesound            # also generate freesound XLSX
@@ -60,6 +60,11 @@ MODES = {
     "modem":     ("Modem",      "Dial-up handshake tones, DTMF digits, FSK data bursts"),
     "insects":   ("Insects",    "Cricket chirps, cicada buzzing, grasshopper rasps"),
     "gamelan":   ("Gamelan",    "Balinese inharmonic metallophones with acoustic beating pairs"),
+    "glass":     ("Glass",      "Brittle shards, singing rims, and crystalline resonances"),
+    "clockwork": ("Clockwork",  "Ticks, ratchets, springs, and tiny mechanisms"),
+    "creature":  ("Creature",   "Imaginary chirps, calls, growls, and breath"),
+    "electricity":("Electricity", "Arcs, transformer hum, relays, and rising charge"),
+    "cave":      ("Cave",       "Drips, stones, subterranean wind, and deep rumbles"),
     "arp":       ("Arp",        "Synthesizer arpeggiator cycling minor/major/pentatonic chords"),
 }
 
@@ -84,6 +89,11 @@ MODE_TAGS = {
     "modem":      "modem dial-up internet dtmf handshake telecom data 90s digital",
     "insects":    "insects cricket cicada nature bug organic field-recording ambient summer",
     "gamelan":    "gamelan balinese javanese metalophone percussion world-music ethnic bell",
+    "glass":      "glass crystal shard brittle resonant impact singing-rim sound-design",
+    "clockwork":  "clockwork mechanism gear tick ratchet spring mechanical miniature",
+    "creature":   "creature animal call chirp growl breath imaginary organic vocal",
+    "electricity":"electricity electric arc transformer hum relay charge spark voltage",
+    "cave":       "cave cavern drip stone rumble subterranean wind ambience reverb",
     "arp":        "arpeggio synthesizer melodic chord electronic music generative tonal",
 }
 
@@ -144,6 +154,11 @@ def render_mode(mode, duration, quality):
         "modem":      bb.make_modem_sequence,
         "insects":    bb.make_insects_sequence,
         "gamelan":    bb.make_gamelan_sequence,
+        "glass":      bb.make_glass_sequence,
+        "clockwork":  bb.make_clockwork_sequence,
+        "creature":   bb.make_creature_sequence,
+        "electricity":bb.make_electricity_sequence,
+        "cave":       bb.make_cave_sequence,
         "arp":        bb.make_arp_sequence,
     }
 
