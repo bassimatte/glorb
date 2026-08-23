@@ -113,7 +113,7 @@ GLORB_INFO = (
 
 FS_LICENSE = "Creative Commons 0"
 FS_PACK = "Glorb Generative Sounds by Bassimat"
-FS_BST_CATEGORY = "fx"   # Sound Effects category on Freesound
+FS_BST_CATEGORY = "fx-el"   # Sound effects > Electronic / Design on Freesound
 
 
 # ── Rendering ────────────────────────────────────────────────────────────────
