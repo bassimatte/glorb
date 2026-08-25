@@ -213,6 +213,79 @@
       letter-spacing: 0.02em;
     }
 
+    /* ── About the instrument ─────────────────────────────────────── */
+    .about-glorb {
+      position: relative;
+      z-index: 1;
+      width: min(calc(100% - 48px), 680px);
+      margin: 10px auto 56px;
+      padding: clamp(26px, 5vw, 44px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 44%),
+        var(--surface);
+      color: var(--fg);
+    }
+    .about-glorb-kicker {
+      margin: 0 0 20px;
+      color: var(--accent);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .about-glorb h2 {
+      max-width: 560px;
+      margin: 0 0 30px;
+      color: var(--fg);
+      font-size: clamp(24px, 5vw, 38px);
+      font-weight: 400;
+      letter-spacing: -0.05em;
+      line-height: 1.08;
+    }
+    .about-glorb-copy { max-width: 580px; }
+    .about-glorb-copy h3 {
+      margin: 0 0 7px;
+      color: var(--fg);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .about-glorb-copy p {
+      margin: 0 0 22px;
+      color: var(--fg);
+      opacity: 0.7;
+      font-size: 12px;
+      line-height: 1.75;
+    }
+    .about-glorb-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+    .about-glorb-links a {
+      color: var(--fg);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s ease;
+    }
+    .about-glorb-links a:hover,
+    .about-glorb-links a:focus-visible { color: var(--accent); }
+    @media (max-width: 520px) {
+      .about-glorb {
+        width: calc(100% - 32px);
+        margin-bottom: 40px;
+        padding: 24px 20px;
+      }
+      .about-glorb h2 { margin-bottom: 26px; }
+    }
+
     /* ── Waveform canvas ─────────────────────────────────────────── */
     .waveform-wrap {
       width: 100%;
@@ -795,6 +868,27 @@
   <div id="status">—</div>
 
 </div><!-- .shell -->
+
+<section class="about-glorb" aria-labelledby="about-glorb-title">
+  <p class="about-glorb-kicker">About the instrument</p>
+  <h2 id="about-glorb-title">Twenty-six sound worlds, generated from pure synthesis.</h2>
+  <div class="about-glorb-copy">
+    <h3>What Glorb creates</h3>
+    <p>Glorb is a free, open-source procedural sound generator for creating original effects and evolving textures in the browser. Its presets move from electronic blips, UI tones and sci-fi machinery to weather, creatures, Foley, bells and subterranean ambience.</p>
+
+    <h3>How it works</h3>
+    <p>Choose one of 26 synthesis presets, then arrange it with continuous, arpeggiated or groove-based playback. A Python engine builds every waveform from mathematics in real time—without samples or loops—while Energy, Brightness and Chaos reshape the result.</p>
+
+    <h3>What you can use it for</h3>
+    <p>Use Glorb for game audio, interfaces, film, installations, electronic composition and experimental sound design. Generate fresh variations, listen through the reactive visualiser and export the sounds as WAV files.</p>
+
+    <div class="about-glorb-links">
+      <a href="https://freesound.org/people/bassimat/packs/45732/" target="_blank" rel="noopener">Listen to Glorb sounds ↗</a>
+      <a href="https://github.com/bassimatte/glorb" target="_blank" rel="noopener">View source ↗</a>
+      <a href="https://bassimatte.github.io/#instruments">More tools by Matteo Bassi ↗</a>
+    </div>
+  </div>
+</section>
 
 <!-- ═══════════ FLOATING SETTINGS ═══════════ -->
 <button id="float-info">i</button>
