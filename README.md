@@ -203,7 +203,9 @@ pip install numpy sounddevice soundfile scipy flask flask-cors
 
 ## Privacy and analytics
 
-The canonical GitHub Pages site uses cookieless [Umami](https://umami.is/) analytics for anonymous, aggregate product statistics. Tracking is restricted to `bassimatte.github.io/glorb`, respects Do Not Track, excludes URL queries and fragments, and is not loaded by local installations, forks, previews, or the Railway backend. It measures generation attempts and outcomes, playback, ten-second listening engagement, downloads, and sharing. Custom events use the `glorb_` prefix and the `glorb` tracker tag. No knob values, URLs, filenames, audio, or exact error messages are sent.
+The canonical GitHub Pages site uses cookieless [Umami](https://umami.is/) analytics for anonymous, aggregate product statistics. Tracking is restricted to `bassimatte.github.io/glorb`, respects Do Not Track, excludes URL queries and fragments, and is not loaded by local installations, forks, previews, or the Railway backend. It measures generation attempts and outcomes, playback, ten-second listening engagement, downloads, sharing, and interactions with the optional support request. Custom events use the `glorb_` prefix and the `glorb` tracker tag. No knob values, URLs, filenames, audio, exact error messages, or support-usage units are sent.
+
+The public site keeps a private estimate of successful hosted synthesis work in the browser's `localStorage`. After substantial use it may display a voluntary support request at a natural pause. The request appears at most twice per rolling year, can be postponed for at least 14 days, and includes a permanent opt-out. This local estimate never leaves the browser and never affects access to GLORB.
 
 ---
 

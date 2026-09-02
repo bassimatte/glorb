@@ -645,6 +645,63 @@
       transition: color .15s;
     }
     #info-close:hover { color: var(--fg); }
+
+    /* ── Voluntary support prompt ────────────────────────────────── */
+    #support-overlay {
+      display: none; position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,.72); align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    #support-overlay.open { display: flex; }
+    #support-box {
+      width: min(100%, 520px); position: relative;
+      padding: 30px 32px 26px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: 0 16px 64px rgba(0,0,0,.8);
+    }
+    #support-box h2 {
+      margin: 0 36px 16px 0; color: var(--accent); font-size: 18px;
+      letter-spacing: .04em; line-height: 1.25;
+    }
+    .support-kicker {
+      margin: 0 0 14px; color: var(--accent); font-size: 9px;
+      letter-spacing: .14em; text-transform: uppercase;
+    }
+    .support-copy { margin: 0; color: var(--fg); font-size: 13px; line-height: 1.7; }
+    .support-note { margin: 13px 0 0; color: var(--fg); opacity: .65; font-size: 11px; line-height: 1.6; }
+    .support-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .support-actions > * {
+      flex: 1; min-height: 42px; display: flex; align-items: center; justify-content: center;
+      padding: 10px 14px; border: 1px solid var(--accent); border-radius: var(--radius);
+      background: var(--accent); color: #000; font: 600 10px var(--font);
+      letter-spacing: .08em; text-align: center; text-decoration: none;
+      text-transform: uppercase; cursor: pointer;
+    }
+    .support-actions .support-later { background: transparent; color: var(--fg); border-color: var(--border); }
+    .support-actions > *:hover,
+    .support-actions > *:focus-visible { border-color: var(--accent); box-shadow: 0 0 18px var(--glow); outline: none; }
+    #support-close {
+      position: absolute; top: 14px; right: 16px; padding: 4px 8px;
+      border: 0; background: none; color: var(--muted); font-size: 18px; cursor: pointer;
+    }
+    #support-close:hover, #support-close:focus-visible { color: var(--accent); outline: none; }
+    .support-optout {
+      display: block; margin: 14px auto 0; padding: 4px; border: 0;
+      background: none; color: var(--muted); font: 9px var(--font);
+      text-decoration: underline; cursor: pointer;
+    }
+    .support-optout:hover, .support-optout:focus-visible { color: var(--accent); outline: none; }
+    .settings-support-link {
+      color: var(--fg); font-size: 10px; letter-spacing: .08em;
+      text-decoration: none; text-transform: uppercase;
+    }
+    .settings-support-link:hover,
+    .settings-support-link:focus-visible { color: var(--accent); }
+    @media (max-width: 520px) {
+      #support-overlay { align-items: flex-end; padding: 0; }
+      #support-box { width: 100%; border-right: 0; border-bottom: 0; border-left: 0; border-radius: var(--radius) var(--radius) 0 0; }
+      .support-actions { flex-direction: column; }
+    }
     #float-drawer {
       position: fixed; bottom: 70px; right: 24px; z-index: 99;
       background: var(--surface); border: 1px solid var(--border);
@@ -886,6 +943,7 @@
       <a href="https://freesound.org/people/bassimat/packs/45732/" target="_blank" rel="noopener">Listen to Glorb sounds ↗</a>
       <a href="https://github.com/bassimatte/glorb" target="_blank" rel="noopener">View source ↗</a>
       <a href="https://bassimatte.github.io/#instruments">More tools by Matteo Bassi ↗</a>
+      <a id="support-about-link" href="https://bassimatte.github.io/support/" target="_blank" rel="noopener">Support Glorb ↗</a>
     </div>
   </div>
 </section>
@@ -992,7 +1050,7 @@
     <p>Click the <strong>🔗</strong> button to copy a shareable link. The URL preserves the playback mode, preset, playback-specific controls, knobs, duration, quality, theme, and background.</p>
 
     <h3>Privacy</h3>
-    <p>The public Glorb website uses <a href="https://umami.is/" target="_blank" rel="noopener" style="color:var(--accent)">Umami</a> for anonymous, aggregate usage statistics. It records generation attempts and outcomes, playback, ten-second listening engagement, downloads, and sharing so the project can be improved. Glorb does not send knob values, URLs, filenames, audio, or exact error messages. Analytics is disabled for local installations, repository forks, preview deployments, and the Railway backend.</p>
+    <p>The public Glorb website uses <a href="https://umami.is/" target="_blank" rel="noopener" style="color:var(--accent)">Umami</a> for anonymous, aggregate usage statistics. It records generation attempts and outcomes, playback, ten-second listening engagement, downloads, sharing, and interactions with the optional support request so the project can be improved. Glorb does not send knob values, URLs, filenames, audio, exact error messages, or its private support-usage estimate. Analytics is disabled for local installations, repository forks, preview deployments, and the Railway backend.</p>
 
     <h3>Offline / Terminal</h3>
     <p>Clone the repo and install dependencies, then run the local server:</p>
@@ -1012,6 +1070,23 @@ python main.py --list                 # list playback modes and presets</pre>
     </div>
   </div>
 </div>
+
+<!-- Voluntary support request — appears only after substantial hosted use -->
+<div id="support-overlay" aria-hidden="true">
+  <div id="support-box" role="dialog" aria-modal="true" aria-labelledby="support-title" aria-describedby="support-copy">
+    <button id="support-close" aria-label="Close support request">✕</button>
+    <h2 id="support-title">Help keep GLORB generating</h2>
+    <p class="support-kicker">Free · open source · no ads</p>
+    <p class="support-copy" id="support-copy">Every sound you generate is synthesized on a paid server. If GLORB has been useful to you, a small contribution helps cover those costs and keeps it freely available to everyone.</p>
+    <p class="support-note">Supporting is entirely optional. Nothing is locked, and your sound is never interrupted.</p>
+    <div class="support-actions">
+      <a id="support-open" href="https://bassimatte.github.io/support/" target="_blank" rel="noopener">Support GLORB ↗</a>
+      <button class="support-later" id="support-later">Not now</button>
+    </div>
+    <button class="support-optout" id="support-optout">Don’t ask again</button>
+  </div>
+</div>
+
 <div id="float-drawer">
   <div class="dr">
     <span class="dr-label">Theme</span>
@@ -1038,6 +1113,10 @@ python main.py --list                 # list playback modes and presets</pre>
       <button class="pill" data-q="studio">Studio</button>
       <button class="pill" data-q="float">Float</button>
     </div>
+  </div>
+  <div class="dr">
+    <span class="dr-label">Support</span>
+    <a class="settings-support-link" id="support-settings-link" href="https://bassimatte.github.io/support/" target="_blank" rel="noopener">♡ Support GLORB</a>
   </div>
   <div class="dr">
     <span class="dr-label">Background</span>
@@ -1114,6 +1193,9 @@ python main.py --list                 # list playback modes and presets</pre>
       playback: ['continuous', 'arp', 'groove'],
       preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
     },
+    support_prompt_shown: { trigger: ['listening', 'download'] },
+    support_action: { action: ['opened', 'later', 'closed', 'opted_out'] },
+    support_link_opened: { source: ['prompt', 'about', 'settings'] },
   });
   const pendingAnalyticsEvents = [];
 
@@ -1183,6 +1265,167 @@ python main.py --list                 # list playback modes and presets</pre>
     return 'unknown';
   }
   initAnalytics();
+
+  // ── Voluntary support prompt ────────────────────────────────────────────
+  // This private counter estimates successful hosted synthesis work. It is
+  // stored only in this browser and is never sent to analytics.
+  const GLORB_SUPPORT_URL = 'https://bassimatte.github.io/support/';
+  const GLORB_SUPPORT_STATE_KEY = 'glorb_support_v1';
+  const SUPPORT_INITIAL_UNITS = 15;
+  const SUPPORT_MIN_GENERATION_UNITS = 0.15;
+  const SUPPORT_UI_PACK_UNITS = 0.5;
+  const SUPPORT_SNOOZE_UNITS = 20;
+  const SUPPORT_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
+  const SUPPORT_THANKS_MS = 365 * 24 * 60 * 60 * 1000;
+  const SUPPORT_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+  const SUPPORT_MAX_SHOWS_PER_YEAR = 2;
+  let supportPromptTimer = null;
+  let supportReturnFocus = null;
+
+  function supportPromptIsHosted() {
+    return analyticsIsConfigured();
+  }
+
+  function defaultSupportState() {
+    return {
+      units: 0,
+      nextUnits: SUPPORT_INITIAL_UNITS,
+      snoozeUntil: 0,
+      suppressUntil: 0,
+      optedOut: false,
+      shownAt: [],
+    };
+  }
+
+  function readSupportState() {
+    if (!supportPromptIsHosted()) return null;
+    try {
+      const stored = JSON.parse(localStorage.getItem(GLORB_SUPPORT_STATE_KEY) || '{}');
+      const state = { ...defaultSupportState(), ...stored };
+      state.units = Math.max(0, Number(state.units) || 0);
+      state.nextUnits = Math.max(SUPPORT_INITIAL_UNITS, Number(state.nextUnits) || SUPPORT_INITIAL_UNITS);
+      state.snoozeUntil = Math.max(0, Number(state.snoozeUntil) || 0);
+      state.suppressUntil = Math.max(0, Number(state.suppressUntil) || 0);
+      state.optedOut = state.optedOut === true;
+      state.shownAt = Array.isArray(state.shownAt)
+        ? state.shownAt.map(Number).filter(Number.isFinite)
+        : [];
+      return state;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeSupportState(state) {
+    try {
+      localStorage.setItem(GLORB_SUPPORT_STATE_KEY, JSON.stringify(state));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function addSupportUnits(units) {
+    const amount = Number(units);
+    if (!Number.isFinite(amount) || amount <= 0) return false;
+    const state = readSupportState();
+    if (!state) return false;
+    state.units += amount;
+    return writeSupportState(state);
+  }
+
+  function addGenerationSupportUnits(durationSeconds) {
+    addSupportUnits(Math.max(SUPPORT_MIN_GENERATION_UNITS, Number(durationSeconds || 0) / 60));
+  }
+
+  function supportPromptCanShow(state) {
+    const now = Date.now();
+    state.shownAt = state.shownAt.filter(timestamp => timestamp > now - SUPPORT_YEAR_MS);
+    return !state.optedOut &&
+      now >= state.snoozeUntil &&
+      now >= state.suppressUntil &&
+      state.units >= state.nextUnits &&
+      state.shownAt.length < SUPPORT_MAX_SHOWS_PER_YEAR;
+  }
+
+  function closeSupportPrompt() {
+    const overlay = document.getElementById('support-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    supportReturnFocus?.focus?.();
+    supportReturnFocus = null;
+  }
+
+  function showSupportPrompt(trigger) {
+    const state = readSupportState();
+    const overlay = document.getElementById('support-overlay');
+    if (!state || !overlay || overlay.classList.contains('open') || !supportPromptCanShow(state)) return false;
+    if (document.querySelector('#info-modal.open, #float-drawer.open, #viz-overlay.active')) return false;
+    state.shownAt.push(Date.now());
+    if (!writeSupportState(state)) return false;
+    supportReturnFocus = document.activeElement;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    trackUsage('support_prompt_shown', { trigger });
+    setTimeout(() => document.getElementById('support-close')?.focus(), 0);
+    return true;
+  }
+
+  function maybeShowSupportPrompt(trigger = 'listening') {
+    if (!supportPromptIsHosted()) return false;
+    clearTimeout(supportPromptTimer);
+    supportPromptTimer = setTimeout(() => {
+      supportPromptTimer = null;
+      if (isPlaying || document.getElementById('btn-generate')?.disabled) return;
+      showSupportPrompt(trigger);
+    }, 600);
+    return true;
+  }
+
+  function deferSupportPrompt(action = 'later') {
+    const overlay = document.getElementById('support-overlay');
+    if (!overlay?.classList.contains('open')) return;
+    const state = readSupportState();
+    if (state) {
+      if (action === 'opted_out') {
+        state.optedOut = true;
+      } else if (action === 'opened') {
+        state.suppressUntil = Date.now() + SUPPORT_THANKS_MS;
+      } else {
+        state.snoozeUntil = Date.now() + SUPPORT_SNOOZE_MS;
+        state.nextUnits = Math.max(state.nextUnits, state.units + SUPPORT_SNOOZE_UNITS);
+      }
+      writeSupportState(state);
+    }
+    trackUsage('support_action', { action });
+    closeSupportPrompt();
+  }
+
+  ['support-open', 'support-about-link', 'support-settings-link'].forEach(id => {
+    document.getElementById(id).href = GLORB_SUPPORT_URL;
+  });
+  document.getElementById('support-close').addEventListener('click', () => deferSupportPrompt('closed'));
+  document.getElementById('support-later').addEventListener('click', () => deferSupportPrompt('later'));
+  document.getElementById('support-optout').addEventListener('click', () => deferSupportPrompt('opted_out'));
+  document.getElementById('support-open').addEventListener('click', () => {
+    trackUsage('support_link_opened', { source: 'prompt' });
+    deferSupportPrompt('opened');
+  });
+  document.getElementById('support-about-link').addEventListener('click', () => {
+    trackUsage('support_link_opened', { source: 'about' });
+  });
+  document.getElementById('support-settings-link').addEventListener('click', () => {
+    trackUsage('support_link_opened', { source: 'settings' });
+  });
+  document.getElementById('support-overlay').addEventListener('click', event => {
+    if (event.target === document.getElementById('support-overlay')) deferSupportPrompt('closed');
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && document.getElementById('support-overlay').classList.contains('open')) {
+      deferSupportPrompt('closed');
+    }
+  });
 
   /* ══════════════════════════════════════════════════════════════════
      SHARED STATE
@@ -2042,6 +2285,7 @@ python main.py --list                 # list playback modes and presets</pre>
           playback: analyticsPlayback(), preset: analyticsPreset(),
           duration: analyticsDuration(+sliderDur.value), quality: selectedQ,
         });
+        addGenerationSupportUnits(buf.duration);
         audioEngagementTracked = false;
         glorb_wavBlob = blob;
         drawWaveform(buf, 1);
@@ -2072,7 +2316,11 @@ python main.py --list                 # list playback modes and presets</pre>
   btnPlay.addEventListener('click', () => {
     if (!audioBuffer) return;
     unlockAudio(); // must happen synchronously inside the gesture for mobile
-    if (isPlaying) { stopPlayback(); return; }
+    if (isPlaying) {
+      stopPlayback();
+      maybeShowSupportPrompt('listening');
+      return;
+    }
     const startedAt = startAudio();
     trackUsage('audio_started', {
       playback: analyticsPlayback(), preset: analyticsPreset(), source: 'manual',
@@ -2092,6 +2340,8 @@ python main.py --list                 # list playback modes and presets</pre>
         trackUsage('download_completed', {
           playback: analyticsPlayback(), preset: analyticsPreset(), format: 'zip',
         });
+        addSupportUnits(SUPPORT_UI_PACK_UNITS);
+        if (!isPlaying) maybeShowSupportPrompt('download');
         setStatus('zip downloaded — 7 individual wavs');
       } catch(e) {
         trackUsage('download_failed', {
@@ -2106,6 +2356,7 @@ python main.py --list                 # list playback modes and presets</pre>
       trackUsage('download_completed', {
         playback: analyticsPlayback(), preset: analyticsPreset(), format: 'wav',
       });
+      if (!isPlaying) maybeShowSupportPrompt('download');
     }
   });
 
@@ -2153,6 +2404,7 @@ python main.py --list                 # list playback modes and presets</pre>
     vizActive = false; vizOverlay.classList.remove('active');
     if (vizAnimId) { cancelAnimationFrame(vizAnimId); vizAnimId = null; }
     stopPlayback();
+    maybeShowSupportPrompt('listening');
   }
 
   function hexToRgb(hex) {
