@@ -177,6 +177,8 @@ def generate():
             "glass":     lambda: bb.make_glass_sequence(duration),
             "clockwork": lambda: bb.make_clockwork_sequence(duration),
             "creature":  lambda: bb.make_creature_sequence(duration),
+            "cat":       lambda: bb.make_cat_sequence(duration),
+            "birds":     lambda: bb.make_birds_sequence(duration),
             "electricity":lambda: bb.make_electricity_sequence(duration),
             "cave":      lambda: bb.make_cave_sequence(duration),
             # legacy: if someone sends mode=arp or mode=groove, honour it

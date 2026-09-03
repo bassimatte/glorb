@@ -42,7 +42,7 @@ PLAYBACK_MODES = {
 SOUND_PRESETS = {
     "glorb":      "Abstract electronic blips and bloops",
     "retro":      "8-bit chiptune square and pulse waves",
-    "nature":     "Birdsong, wind, rain, and forest textures",
+    "nature":     "Rain, fire, insects, and forest textures",
     "scifi":      "Phasers, warp drives, and laser bursts",
     "haptic":     "Tactile vibration pulses and clicks",
     "radio":      "AM/FM static, morse, and transmission artefacts",
@@ -63,6 +63,8 @@ SOUND_PRESETS = {
     "glass":      "Brittle shards, singing rims, and crystalline resonances",
     "clockwork":  "Ticks, ratchets, springs, and tiny mechanisms",
     "creature":   "Imaginary chirps, calls, growls, and breath",
+    "cat":        "Meows, mewls, trills, purrs, and hisses",
+    "birds":      "Peeps, whistles, trills, warbles, and calls",
     "electricity":"Arcs, transformer hum, relays, and rising charge",
     "cave":       "Drips, stones, subterranean wind, and deep rumbles",
     "synth":      "Dedicated oscillator voice for Arp playback",
@@ -2537,6 +2539,183 @@ def _creature_breath():
 _CREATURE_SOUNDS = [("chirp", _creature_chirp, 4), ("growl", _creature_growl, 2), ("call", _creature_call, 3), ("breath", _creature_breath, 2)]
 
 
+# =============================================================================
+# CAT PRESET — formant-shaped feline vocal gestures
+# =============================================================================
+
+def _cat_voiced(freq_curve, duration, nasal=0.7, breath=0.025):
+    """Harmonic glottal source shaped by feline-like vocal resonances."""
+    t = _t(duration)
+    phase = 2 * np.pi * np.cumsum(freq_curve) / SAMPLE_RATE
+    source = np.zeros(len(t), dtype=np.float64)
+    for harmonic in range(1, 13):
+        source += np.sin(harmonic * phase) / (harmonic ** 1.18)
+
+    scale = _knob(KNOB_BRIGHTNESS, 0.78, 1.22)
+    formants = (
+        (520 * scale, 980 * scale, 1.0),
+        (1000 * scale, 1750 * scale, nasal),
+        (2100 * scale, 3600 * scale, 0.32),
+    )
+    voice = source * 0.22
+    for low, high, gain in formants:
+        voice += gain * _bandpass(source, max(60, low), min(SAMPLE_RATE * 0.45, high))
+    if breath > 0:
+        air = _bandpass(np.random.randn(len(t)), 350, min(6500, SAMPLE_RATE * 0.45))
+        voice += air * breath
+    env = np.sin(np.pi * np.linspace(0, 1, len(t))) ** 0.62
+    voice *= env
+    peak = np.max(np.abs(voice))
+    return to_stereo(voice / (peak + 1e-9) * 0.68)
+
+
+def _cat_meow():
+    duration = random.uniform(0.35, 0.95)
+    t = _t(duration)
+    x = t / duration
+    base = _knob(KNOB_BRIGHTNESS, 230, 520) * random.uniform(0.88, 1.12)
+    arch = np.sin(np.pi * x) ** random.uniform(0.7, 1.25)
+    freq = base * (0.88 + random.uniform(0.65, 1.25) * arch)
+    freq *= 1 + random.uniform(0.012, 0.035) * np.sin(2 * np.pi * random.uniform(5, 9) * t)
+    return _cat_voiced(freq, duration, nasal=random.uniform(0.65, 0.95))
+
+
+def _cat_mewl():
+    duration = random.uniform(0.18, 0.48)
+    t = _t(duration)
+    x = t / duration
+    base = _knob(KNOB_BRIGHTNESS, 430, 820) * random.uniform(0.92, 1.1)
+    freq = base * (0.92 + 0.48 * np.sin(np.pi * x) ** 0.8 - 0.12 * x)
+    freq *= 1 + 0.025 * np.sin(2 * np.pi * random.uniform(8, 13) * t)
+    return _cat_voiced(freq, duration, nasal=0.92, breath=0.018)
+
+
+def _cat_two_part_call():
+    first = _cat_mewl()
+    gap = silence(random.uniform(0.025, 0.07))
+    second = _cat_meow()
+    return np.concatenate([first, gap, second])
+
+
+def _cat_trill():
+    duration = random.uniform(0.18, 0.5)
+    t = _t(duration)
+    base = _knob(KNOB_BRIGHTNESS, 320, 700) * random.uniform(0.9, 1.12)
+    flutter = 0.10 * np.sin(2 * np.pi * random.uniform(18, 30) * t)
+    glide = np.linspace(0.92, random.uniform(1.05, 1.3), len(t))
+    return _cat_voiced(base * glide * (1 + flutter), duration, nasal=0.85, breath=0.012)
+
+
+def _cat_purr():
+    duration = random.uniform(0.65, 1.6)
+    t = _t(duration)
+    fundamental = random.uniform(75, 125)
+    phase = 2 * np.pi * np.cumsum(fundamental * (1 + 0.025 * np.sin(2*np.pi*1.3*t))) / SAMPLE_RATE
+    voice = np.sin(phase) + 0.45*np.sin(2*phase) + 0.2*np.sin(3*phase)
+    pulse = 0.28 + 0.72 * np.maximum(0, np.sin(2*np.pi*random.uniform(22, 29)*t)) ** 1.7
+    rumble = _bandpass(np.random.randn(len(t)), 45, 420) * 0.3
+    env = np.sin(np.pi * np.linspace(0, 1, len(t))) ** 0.7
+    sound = (voice * pulse + rumble) * env
+    return to_stereo(sound / (np.max(np.abs(sound)) + 1e-9) * 0.58)
+
+
+def _cat_hiss():
+    duration = random.uniform(0.3, 0.85)
+    n = int(duration * SAMPLE_RATE)
+    sound = _bandpass(np.random.randn(n), 900, min(9500, SAMPLE_RATE * 0.45))
+    flutter = 0.82 + 0.18*np.sin(2*np.pi*random.uniform(7, 14)*np.arange(n)/SAMPLE_RATE)
+    env = np.sin(np.pi * np.linspace(0, 1, n)) ** 0.45
+    sound *= flutter * env
+    return to_stereo(sound / (np.max(np.abs(sound)) + 1e-9) * 0.56)
+
+
+_CAT_SOUNDS = [
+    ("meow", _cat_meow, 6),
+    ("mewl", _cat_mewl, 3),
+    ("two-part", _cat_two_part_call, 2),
+    ("trill", _cat_trill, 2),
+    ("purr", _cat_purr, 2),
+    ("hiss", _cat_hiss, 1),
+]
+
+
+# =============================================================================
+# BIRDS PRESET — melodic peeps, whistles, trills, and phrase grammar
+# =============================================================================
+
+def _bird_tone(freq_curve, duration, trill_rate=0.0, breath=0.008):
+    t = _t(duration)
+    if trill_rate:
+        freq_curve = freq_curve * (1 + random.uniform(0.018, 0.055) * np.sin(2*np.pi*trill_rate*t))
+    phase = 2 * np.pi * np.cumsum(freq_curve) / SAMPLE_RATE
+    sound = np.sin(phase) + 0.22*np.sin(2*phase + 0.4) + 0.07*np.sin(3*phase)
+    if breath:
+        sound += breath * _bandpass(np.random.randn(len(t)), 1800, min(10000, SAMPLE_RATE * 0.45))
+    env = np.sin(np.pi * np.linspace(0, 1, len(t))) ** 0.48
+    sound *= env
+    return to_stereo(sound / (np.max(np.abs(sound)) + 1e-9) * 0.62,
+                     haas_ms=random.uniform(0.4, 3.0))
+
+
+def _bird_peep():
+    duration = random.uniform(0.055, 0.16)
+    t = _t(duration)
+    x = t / duration
+    base = _knob(KNOB_BRIGHTNESS, 1700, 4300) * random.uniform(0.85, 1.18)
+    contour = 0.9 + random.uniform(0.18, 0.55) * np.sin(np.pi*x) ** 0.8
+    return _bird_tone(base * contour, duration)
+
+
+def _bird_double_peep():
+    first = _bird_peep()
+    return np.concatenate([first, silence(random.uniform(0.025, 0.075)), _bird_peep()])
+
+
+def _bird_whistle():
+    duration = random.uniform(0.16, 0.48)
+    t = _t(duration)
+    x = t / duration
+    start = _knob(KNOB_BRIGHTNESS, 1300, 3600) * random.uniform(0.85, 1.15)
+    direction = random.choice((-1, 1))
+    sweep = random.uniform(0.22, 0.7)
+    curve = x*x*(3 - 2*x)
+    freq = start * (1 + direction * sweep * curve)
+    return _bird_tone(np.maximum(700, freq), duration, trill_rate=random.uniform(4, 8))
+
+
+def _bird_trill():
+    duration = random.uniform(0.18, 0.52)
+    t = _t(duration)
+    base = _knob(KNOB_BRIGHTNESS, 1900, 4800) * random.uniform(0.88, 1.12)
+    drift = np.linspace(random.uniform(0.9, 1.0), random.uniform(1.0, 1.18), len(t))
+    return _bird_tone(base * drift, duration, trill_rate=random.uniform(22, 38), breath=0.004)
+
+
+def _bird_warble():
+    count = random.randint(3, 6)
+    parts = []
+    root = _knob(KNOB_BRIGHTNESS, 1400, 3500) * random.uniform(0.9, 1.1)
+    ratios = random.choice(([1, 1.28, 1.12, 1.5], [1.35, 1.08, 1.42, 0.96], [1, 1.5, 1.25, 1.68]))
+    for i in range(count):
+        duration = random.uniform(0.055, 0.14)
+        t = _t(duration)
+        ratio = ratios[i % len(ratios)]
+        freq = root * ratio * (1 + 0.12*np.sin(np.pi*t/duration))
+        parts.append(_bird_tone(freq, duration, trill_rate=random.uniform(7, 14), breath=0.003))
+        if i < count - 1:
+            parts.append(silence(random.uniform(0.018, 0.055)))
+    return np.concatenate(parts)
+
+
+_BIRD_SOUNDS = [
+    ("peep", _bird_peep, 5),
+    ("double-peep", _bird_double_peep, 4),
+    ("whistle", _bird_whistle, 3),
+    ("trill", _bird_trill, 3),
+    ("warble", _bird_warble, 3),
+]
+
+
 def _electric_arc():
     dur = random.uniform(.04, .22)
     n = int(dur * SAMPLE_RATE)
@@ -2638,6 +2817,14 @@ def make_creature_sequence(target_duration=10.0):
     return _make_sound_table_sequence(_CREATURE_SOUNDS, target_duration, (.1, .55))
 
 
+def make_cat_sequence(target_duration=10.0):
+    return _make_sound_table_sequence(_CAT_SOUNDS, target_duration, (.25, 1.25), mode='cat')
+
+
+def make_birds_sequence(target_duration=10.0):
+    return _make_sound_table_sequence(_BIRD_SOUNDS, target_duration, (.12, .8), mode='birds')
+
+
 def make_electricity_sequence(target_duration=10.0):
     return _make_sound_table_sequence(_ELECTRICITY_SOUNDS, target_duration, (.04, .3))
 
@@ -2687,6 +2874,8 @@ _PRESET_EVENTS = {
     'glass':      lambda: _weighted_pick(_GLASS_SOUNDS),
     'clockwork':  lambda: _weighted_pick(_CLOCKWORK_SOUNDS),
     'creature':   lambda: _weighted_pick(_CREATURE_SOUNDS),
+    'cat':        lambda: _weighted_pick(_CAT_SOUNDS),
+    'birds':      lambda: _weighted_pick(_BIRD_SOUNDS),
     'electricity':lambda: _weighted_pick(_ELECTRICITY_SOUNDS),
     'cave':       lambda: _weighted_pick(_CAVE_SOUNDS),
     'nature':     lambda: make_blip()[0],   # fallback — no event table

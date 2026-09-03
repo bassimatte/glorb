@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
   <title>GLORB — Free Procedural Sound Generator &amp; Generative Audio Synthesiser</title>
-  <meta name="description" content="Create and download original procedural sound effects in your browser. Explore 26 generative presets, three playback modes, and WAV export—free and open source." />
+  <meta name="description" content="Create and download original procedural sound effects in your browser. Explore 28 generative presets, three playback modes, and WAV export—free and open source." />
   <link rel="canonical" href="https://bassimatte.github.io/glorb/" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="GLORB" />
   <meta property="og:title" content="GLORB — Free Procedural Sound Generator &amp; Generative Audio Synthesiser" />
-  <meta property="og:description" content="Create and download original procedural sound effects in your browser. Explore 26 generative presets, three playback modes, and WAV export—free and open source." />
+  <meta property="og:description" content="Create and download original procedural sound effects in your browser. Explore 28 generative presets, three playback modes, and WAV export—free and open source." />
   <meta property="og:url" content="https://bassimatte.github.io/glorb/" />
   <meta property="og:image" content="https://raw.githubusercontent.com/bassimatte/glorb/main/screenshots/main%20ui%20-%20blue%20particles.png" />
   <meta property="og:image:secure_url" content="https://raw.githubusercontent.com/bassimatte/glorb/main/screenshots/main%20ui%20-%20blue%20particles.png" />
@@ -20,7 +20,7 @@
   <meta property="og:image:alt" content="GLORB procedural sound generator interface with a blue particle background" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="GLORB — Free Procedural Sound Generator &amp; Generative Audio Synthesiser" />
-  <meta name="twitter:description" content="Create and download original procedural sound effects with 26 generative presets, three playback modes, and WAV export." />
+  <meta name="twitter:description" content="Create and download original procedural sound effects with 28 generative presets, three playback modes, and WAV export." />
   <meta name="twitter:image" content="https://raw.githubusercontent.com/bassimatte/glorb/main/screenshots/main%20ui%20-%20blue%20particles.png" />
   <meta name="twitter:image:alt" content="GLORB procedural sound generator interface with a blue particle background" />
   <script type="application/ld+json">
@@ -31,7 +31,7 @@
     "name": "GLORB",
     "alternateName": "GLORB Procedural Sound Generator",
     "url": "https://bassimatte.github.io/glorb/",
-    "description": "Create and download original procedural sound effects in your browser with 26 generative presets, three playback modes, and WAV export.",
+    "description": "Create and download original procedural sound effects in your browser with 28 generative presets, three playback modes, and WAV export.",
     "applicationCategory": "MultimediaApplication",
     "applicationSubCategory": "AudioApplication",
     "operatingSystem": "Any",
@@ -55,7 +55,7 @@
     "license": "https://opensource.org/license/mit",
     "sameAs": "https://github.com/bassimatte/glorb",
     "featureList": [
-      "26 generative sound presets",
+      "28 generative sound presets",
       "Three playback modes",
       "Procedural sound generation",
       "WAV audio export"
@@ -752,7 +752,7 @@
       organic sound generator
       <a class="creator-link" href="https://bassimatte.github.io/">by Matteo Bassi</a>
     </div>
-    <p class="intro">Create and download original procedural sound effects with 26 generative presets, three playback modes, and WAV export—all free, open source, and made directly in your browser.</p>
+    <p class="intro">Create and download original procedural sound effects with 28 generative presets, three playback modes, and WAV export—all free, open source, and made directly in your browser.</p>
   </header>
 
   <!-- Mode selector -->
@@ -793,6 +793,8 @@
         <button class="mode-pill" data-mode="glass">Glass</button>
         <button class="mode-pill" data-mode="clockwork">Clockwork</button>
         <button class="mode-pill" data-mode="creature">Creature</button>
+        <button class="mode-pill" data-mode="cat">Cat</button>
+        <button class="mode-pill" data-mode="birds">Birds</button>
         <button class="mode-pill" data-mode="electricity">Electricity</button>
         <button class="mode-pill" data-mode="cave">Cave</button>
         <button class="mode-pill" data-mode="synth">Synth</button>
@@ -928,13 +930,13 @@
 
 <section class="about-glorb" aria-labelledby="about-glorb-title">
   <p class="about-glorb-kicker">About the instrument</p>
-  <h2 id="about-glorb-title">Twenty-six sound worlds, generated from pure synthesis.</h2>
+  <h2 id="about-glorb-title">Twenty-eight sound worlds, generated from pure synthesis.</h2>
   <div class="about-glorb-copy">
     <h3>What Glorb creates</h3>
     <p>Glorb is a free, open-source procedural sound generator for creating original effects and evolving textures in the browser. Its presets move from electronic blips, UI tones and sci-fi machinery to weather, creatures, Foley, bells and subterranean ambience.</p>
 
     <h3>How it works</h3>
-    <p>Choose one of 26 synthesis presets, then arrange it with continuous, arpeggiated or groove-based playback. A Python engine builds every waveform from mathematics in real time—without samples or loops—while Energy, Brightness and Chaos reshape the result.</p>
+    <p>Choose one of 28 synthesis presets, then arrange it with continuous, arpeggiated or groove-based playback. A Python engine builds every waveform from mathematics in real time—without samples or loops—while Energy, Brightness and Chaos reshape the result.</p>
 
     <h3>What you can use it for</h3>
     <p>Use Glorb for game audio, interfaces, film, installations, electronic composition and experimental sound design. Generate fresh variations, listen through the reactive visualiser and export the sounds as WAV files.</p>
@@ -979,6 +981,7 @@
       <li><strong>Horror textures</strong> — tremolo drones, eerie sweeps, ghost whispers and jump scares</li>
       <li><strong>Underwater soundscapes</strong> — sonar pings, bubble streams and hydrophone hiss</li>
       <li><strong>Foley and haptics</strong> — footsteps, paper rustle, clicks, taps and motor rumble</li>
+      <li><strong>Cats and birds</strong> — formant-shaped meows, pulsing purrs, melodic peeps, whistles and warbles</li>
     </ul>
 
     <h3>Synthesis Engine</h3>
@@ -1010,11 +1013,11 @@
       <li><strong>Groove</strong> — rhythmically quantised events using five groove templates and adjustable BPM</li>
     </ul>
 
-    <h3>26 Presets</h3>
+    <h3>28 Presets</h3>
     <ul>
       <li><strong>Glorb</strong> — abstract blip/bloop electronic tones</li>
       <li><strong>Retro</strong> — 8-bit chiptune square and pulse waves</li>
-      <li><strong>Nature</strong> — birdsong, wind, rain, and forest textures</li>
+      <li><strong>Nature</strong> — rain, fire, insects, and forest textures</li>
       <li><strong>Sci-Fi</strong> — phasers, warp drives, and laser bursts</li>
       <li><strong>Haptic</strong> — tactile vibration pulses and clicks</li>
       <li><strong>Radio</strong> — AM/FM static, morse, and transmission artefacts</li>
@@ -1035,6 +1038,8 @@
       <li><strong>Glass</strong> — brittle shards, singing rims, and crystalline resonances</li>
       <li><strong>Clockwork</strong> — ticks, ratchets, springs, and tiny mechanisms</li>
       <li><strong>Creature</strong> — imaginary chirps, calls, growls, and breath</li>
+      <li><strong>Cat</strong> — meows, mewls, trills, purrs, and hisses</li>
+      <li><strong>Birds</strong> — melodic peeps, whistles, trills, warbles, and calls</li>
       <li><strong>Electricity</strong> — arcs, transformer hum, relays, and rising charge</li>
       <li><strong>Cave</strong> — drips, stones, subterranean wind, and deep rumbles</li>
       <li><strong>Synth</strong> — dedicated triangle, saw, or square oscillator voice for Arp playback</li>
@@ -1156,13 +1161,13 @@ python main.py --list                 # list playback modes and presets</pre>
   const GLORB_ANALYTICS_SCHEMA = Object.freeze({
     generation_started: {
       playback: ['continuous', 'arp', 'groove'],
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'cat', 'birds', 'electricity', 'cave', 'synth'],
       duration: ['short', 'medium', 'long'],
       quality: ['standard', 'high', 'studio', 'float'],
     },
     generation_completed: {
       playback: ['continuous', 'arp', 'groove'],
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'cat', 'birds', 'electricity', 'cave', 'synth'],
       duration: ['short', 'medium', 'long'],
       quality: ['standard', 'high', 'studio', 'float'],
     },
@@ -1172,16 +1177,16 @@ python main.py --list                 # list playback modes and presets</pre>
     },
     audio_started: {
       playback: ['continuous', 'arp', 'groove'],
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'cat', 'birds', 'electricity', 'cave', 'synth'],
       source: ['autoplay', 'manual'],
     },
     audio_engaged: {
       playback: ['continuous', 'arp', 'groove'],
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'cat', 'birds', 'electricity', 'cave', 'synth'],
     },
     download_completed: {
       playback: ['continuous', 'arp', 'groove'],
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'cat', 'birds', 'electricity', 'cave', 'synth'],
       format: ['wav', 'zip'],
     },
     download_failed: {
@@ -1191,7 +1196,7 @@ python main.py --list                 # list playback modes and presets</pre>
     },
     share_copied: {
       playback: ['continuous', 'arp', 'groove'],
-      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'electricity', 'cave', 'synth'],
+      preset: ['glorb', 'retro', 'nature', 'scifi', 'haptic', 'radio', 'ui-pack', 'foley', 'underwater', 'weather', 'bell', 'bass', 'glitch', 'pinball', 'horror', 'granular', 'lofi', 'modem', 'insects', 'gamelan', 'glass', 'clockwork', 'creature', 'cat', 'birds', 'electricity', 'cave', 'synth'],
     },
     support_prompt_shown: { trigger: ['listening', 'download'] },
     support_action: { action: ['opened', 'later', 'closed', 'opted_out'] },

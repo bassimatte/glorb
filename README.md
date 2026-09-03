@@ -8,7 +8,7 @@
 
 ## What you hear
 
-Glorb combines **3 playback modes** with **26 sound-source presets**. Choose how events are arranged, then choose what they sound like; every combination is generated procedurally.
+Glorb combines **3 playback modes** with **28 sound-source presets**. Choose how events are arranged, then choose what they sound like; every combination is generated procedurally.
 
 - **abstract blips and blops** that chirp, sweep and pop like a living circuit board
 - **8-bit chiptune melodies** — square waves stepping through arpeggios with a crisp retro bite
@@ -63,6 +63,8 @@ Three knobs — **⚡ Energy**, **☀ Brightness** and **🌀 Chaos** — shape 
 | **Glass** | Brittle shards, singing rims, crystalline resonances |
 | **Clockwork** | Ticks, ratchets, springs, tiny mechanisms |
 | **Creature** | Imaginary chirps, calls, growls, breath |
+| **Cat** | Meows, mewls, trills, purrs, hisses |
+| **Birds** | Peeps, whistles, trills, warbles, calls |
 | **Electricity** | Arcs, transformer hum, relays, rising charge |
 | **Cave** | Drips, stones, subterranean wind, deep rumbles |
 | **Synth** | Dedicated triangle, saw, or square oscillator voice for Arp playback |
@@ -133,7 +135,7 @@ python main.py --list       # list playback modes and presets
 
 ## Batch renderer (`generate.py`)
 
-Generate audio files for one, several, or all 26 standalone renderers — with optional Freesound bulk-upload XLSX:
+Generate audio files for one, several, or all 28 standalone renderers — with optional Freesound bulk-upload XLSX:
 
 ```bash
 # Single mode
@@ -163,7 +165,7 @@ python generate.py --all --energy 80 --brightness 30 --chaos 70 --seed 42
 | Flag | Default | Description |
 |---|---|---|
 | `--mode MODE [...]` | — | Mode(s) to render |
-| `--all` | — | Render all 26 modes |
+| `--all` | — | Render all 28 modes |
 | `--duration SECS` | 30 | Duration in seconds |
 | `--quality PRESET` | high | `standard` / `high` / `studio` / `float` |
 | `--energy 0-100` | 50 | Event density knob |
